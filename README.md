@@ -1,8 +1,8 @@
 # Workers & Project
 Lee Siwoong bluewings02@hanyang.ac.kr
 </br>
-Jang YuanJae semxe123@gmail.com   
-Park JaeBeom tony0604@hanyang.ac.kr
+Jang YuanJae, Department of Information System, semxe123@gmail.com   
+Park JaeBeom, Department of Information System, tony0604@hanyang.ac.kr
 </br>
 AI-based Smart Environment Control System using Reinforcement Learning [WorkIn]
 
