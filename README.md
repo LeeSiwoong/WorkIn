@@ -2,7 +2,6 @@
 Lee Siwoong 
 </br>
 Jang YuanJae semxe123@gmail.com   
-</br>
 Park JaeBeom tony0604@hanyang.ac.kr
 </br>
 AI-based Smart Environment Control System using Reinforcement Learning [WorkIn]
