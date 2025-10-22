@@ -1,5 +1,5 @@
 # Workers & Project
-Lee Siwoong bluewings02@hanyang.ac.kr
+Lee Siwoong, Department of Information System, bluewings02@hanyang.ac.kr
 </br>
 Jang YuanJae, Department of Information System, semxe123@gmail.com   
 Park JaeBeom, Department of Information System, tony0604@hanyang.ac.kr
