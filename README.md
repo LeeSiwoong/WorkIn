@@ -1,6 +1,5 @@
 # Workers & Project
-Lee Siwoong 
-</br>
+Lee Siwoong bluewings02@hanyang.ac.kr
 Jang YuanJae semxe123@gmail.com   
 Park JaeBeom tony0604@hanyang.ac.kr
 </br>
