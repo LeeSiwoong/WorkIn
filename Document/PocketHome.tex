@@ -13,23 +13,6 @@
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codepurple}{rgb}{0.58,0,0.82}
 \definecolor{codeblue}{rgb}{0.0,0.0,0.6}
-\lstdefinestyle{mystyle}{
-    backgroundcolor=\color{lightgray},
-    commentstyle=\color{codegreen},
-    keywordstyle=\color{codepurple},
-    stringstyle=\color{codeblue},
-    basicstyle=\ttfamily\scriptsize,
-    breaklines=true,
-    breakatwhitespace=true,
-    showstringspaces=false,
-    tabsize=2,
-    frame=tb,
-    numbers=none,
-    numberstyle=\tiny\color{gray},
-    captionpos=b,
-    framerule=0pt,
-}
-\lstset{style=mystyle}
 \lstdefinelanguage{Kotlin}{
   keywords={FUNCTION, IF, ELSE, RETURN, END, CALL, VAR, TRUE, FALSE, NULL, class, interface, companion, object, val, var, fun, is, in, data, enum, package, import, where, new, try, catch, finally, for, while, do, when, throw, break, continue, typeof},
   sensitive=true,
@@ -38,6 +21,26 @@
   morestring=[b]",
   morestring=[b]"""
 }
+\lstdefinestyle{codestyle}{
+    basicstyle=\ttfamily\scriptsize,  % Small tt font
+    breaklines=true,                 % Auto-wrap long lines
+    breakatwhitespace=true,          % Wrap at spaces
+    frame=tb,                        % Simple frame top and bottom
+    framesep=3pt,
+    numbers=none,                    % --- NO line numbers ---
+    captionpos=b,                    % Caption position (none will be used)
+    aboveskip=1.5\medskipamount,     % Space above code
+    belowskip=1.5\medskipamount,     % Space below code
+    showstringspaces=false,
+    % --- FIX for Python/Kotlin comments ---
+    commentstyle=\color{codegreen},  % Set comment color
+    morecomment=[l]{//},             % Define // as a line comment
+    morecomment=[l]{\#}              % Define # as a line comment
+}
+
+% Set this 'codestyle' as the default for all lstlisting environments
+\lstset{style=codestyle}
+
 
 % ===== DOCUMENT START =====
 \begin{document}
@@ -137,45 +140,14 @@ The fundamental flaw in shared environmental control is the requirement of enfor
 \subsection{Account Management}
 \begin{itemize}
     \item \textbf{User Identification:}
-        \begin{itemize}
-            \item \textit{Initial Setup:} Upon first launch, the user enters their unique \texttt{User ID} once.
-            \item \textit{ID Uniqueness:} The \texttt{User ID} must be a unique value, verified against the central database in real-time to prevent duplicates.
-            \item \textit{Session Management:} After registration, the app stores the \texttt{User ID} on the device, allowing the user to transmit preferences without logging in each time.
-        \end{itemize}
+User enters their unique \texttt{User ID} once, and can delete their profile with \texttt{User ID}.
+After registration, the app stores the \texttt{User ID} on the device, allowing the user to transmit preferences without logging in each time.
 \end{itemize}
 
 \subsection{Core Features (Single Screen Interface)}
-\subsubsection{Preference Input Dashboard}
 \begin{itemize}
-    \item \textbf{Single Screen UI:} All core functions (ID verification, preference input) are provided on a single main screen.
-    \item \textbf{User ID Display:} The user's currently registered \texttt{User ID} is clearly displayed.
-    \item \textbf{Optional Biometric Data Consent:} A heart shaped icon in the top-left corner opens a pop-up window where users can consent to the collection of optional biometric data.
-    \item \textbf{Optional Profile Access:} A \texttt{+} (plus) button in the top-right corner. Tapping this button opens an overlay screen (modal) where users can input or delete their optional `Personal Profile Attributes' (e.g., MBTI, sensitivity to cold).
-\end{itemize}
-
-\subsubsection{Environmental Preference Controls}
-\begin{itemize}
-    \item \textbf{Temperature:}
-        \begin{itemize}
-            \item \textit{Control:} Stepper control.
-            \item \textit{Range:} 18.0°C \textasciitilde{} 28.0°C.
-            \item \textit{Increment:} Adjustable in units of 0.5°C.
-        \end{itemize}
-    \item \textbf{Humidity:}
-        \begin{itemize}
-            \item \textit{Control:} 5-step segmented button group.
-            \item \textit{Steps:} 5 levels (e.g., ``Very Dry", ``Dry", ``Neutral", ``Humid", ``Very Humid").
-        \end{itemize}
-    \item \textbf{Illumination (Brightness):}
-        \begin{itemize}
-            \item \textit{Control:} Continuous slider.
-            \item \textit{Range:} 0\% (Darkest) \textasciitilde{} 100\% (Brightest).
-        \end{itemize}
-\end{itemize}
-
-\subsubsection{Data Synchronization}
-\begin{itemize}
-    \item \textbf{Real-time Update:} As soon as the user changes any of the three preference values (temperature, humidity, illumination), the new value is immediately sent with the \texttt{User ID} to the central database to be updated and stored.
+    \item \textbf{Single Screen UI:} All core functions (ID verification, preference input) are provided on a single main screen. It displays \texttt{User ID}, \texttt{Temperature}, \texttt{Humidity}, \texttt{Illumination (Brightness)} those can be manually changed, and other preferences such as \texttt{Optional Biometric Data Consent} button and so on.
+\item \textbf{Real-time Update:} As soon as the user changes any of the three preference values (temperature, humidity, illumination), the new value is immediately sent with the \texttt{User ID} to the central database to be updated and stored.
 \end{itemize}
 
 \subsection{Optional Data Integration}
@@ -185,6 +157,7 @@ The fundamental flaw in shared environmental control is the requirement of enfor
     \item \textbf{Blood Oxygen Sensor (SpO2):} With user consent, integrates with the smartphone's blood oxygen saturation sensor (on compatible devices).
     \item \textbf{Real-time Transmission:} When activated, periodically transmits the real-time measured heart rate data along with the \texttt{User ID} to the central database.
 \end{itemize}
+
 \subsubsection{Personal Profile Attributes}
 \begin{itemize}
     \item \textbf{Optional Input:} Allows users to voluntarily provide additional personal attributes, such as MBTI type, self-assessed sensitivity to cold/light, or general work patterns (e.g., ``Focus work", ``Collaborative work").
@@ -199,8 +172,7 @@ The fundamental flaw in shared environmental control is the requirement of enfor
 
 \subsubsection{Preference Transmission}
 \begin{itemize}
-    \item \textbf{Interval-based Communication:} While in space, the smartphone transmits its \texttt{User ID} and current preference data to the local space system at regular intervals (e.g., every 5 minutes).
-    \item \textbf{Purpose:} This allows the space system to identify in real-time which users (User IDs) with which preferences are currently present in this space.
+    \item \textbf{Interval-based Communication:} While in space, the smartphone transmits its \texttt{User ID} and current preference data to the local space system at regular intervals (e.g., every 5 minutes). This allows the space system to identify in real-time which users (User IDs) with which preferences are currently present in this space.
 \end{itemize}
 
 \subsection{Data Utilization (AI Core)}
@@ -232,6 +204,7 @@ The fundamental flaw in shared environmental control is the requirement of enfor
         \end{itemize}
 \end{itemize}
 
+\vspace{\baselineskip}
 
 \section{Development Environment}
 
@@ -240,7 +213,7 @@ The fundamental flaw in shared environmental control is the requirement of enfor
     \item \textbf{Windows}\par
         \begin{figure}[h]
         \centering
-        \includegraphics[width=.8\columnwidth]{Windows.jpg}
+        \includegraphics[width=.7\columnwidth]{Windows.jpg}
         \centering
         \caption{Windows} 
         \end{figure}\par
@@ -252,7 +225,7 @@ The fundamental flaw in shared environmental control is the requirement of enfor
     \item \textbf{Kotlin}\par
         \begin{figure}[h]
         \centering
-        \includegraphics[width=.8\columnwidth]{Kotlin.png}
+        \includegraphics[width=.7\columnwidth]{Kotlin.png}
         \centering
         \caption{Kotlin} 
         \end{figure}\par
@@ -324,185 +297,37 @@ We will use existing, validated software and algorithms. The Kotlin application 
 
 \section{Specifications}
 \textit{Technology Stack: Kotlin (Android App), Firebase (Backend/DB), Python (AI Core)}
+\vspace{\baselineskip}
+\subsection{User Roles}
+\begin{itemize}
+    \item \textbf{User Identification:} When the app is opened for the first time, the user must enter a unique  \texttt{User ID}. It must not be in the database. If the user wants to delete or change \texttt{User ID}, it can be done by clicking the ID section in main screen. The app must not run if there are no valid ID on user's app.
+\end{itemize}
 
-\subsection{Account Management} 
+\subsection{Core Features}
+\begin{itemize}
+    \item \textbf{Optional Biometric Data Consent:} A heart shaped icon in the top-left corner opens a pop-up window where users can consent to the collection of optional biometric data.
+    \item \textbf{Optional Profile Access:} A \texttt{+} (plus) button in the top-right corner. Tapping this button opens an overlay screen (modal) where users can input or delete their optional `Personal Profile Attributes' (e.g., MBTI, sensitivity to cold).
+\end{itemize}
 
-\subsubsection{ID Uniqueness (New ID Uniqueness Verification)}
-\paragraph{Platform:} Kotlin (Android App) $\rightarrow$ Firebase (Firestore)
-\paragraph{Description:} Logic for when the user enters an ID and clicks the 'Register' button.
-
-\begin{lstlisting}[language=Kotlin]
-// Called when the user clicks the 'Register' button
-FUNCTION onRegisterClick(userID: String):
-    IF userID.length < 4:
-        showError("ID must be at least 4 characters.")
-        RETURN
-
-    // 1. Check if a document with this ID already exists
-    db = Firebase.firestore
-    userDocRef = db.collection("users").document(userID)
-
-    userDocRef.get()
-        .addOnSuccessListener { document ->
-            IF document.exists():
-                // 2a. If doc exists, show error
-                showError("This ID is already in use.")
-            ELSE:
-                // 2b. If doc does not exist (unique ID)
-                // 3. Create a new user doc
-                defaultPrefs = {
-                    "temperature": 24.0,
-                    "humidity": 3,  // "Neutral"
-                    "illumination": 80
-                }
-                userDocRef.set({ 
-                    "preferences": defaultPrefs, 
-                    "createdAt": NOW() 
-                })
-                
-                // 4. Save ID locally (Session)
-                CALL saveUserIDLocally(userID)
-                
-                // 5. Navigate to main dashboard
-                navigateToMainDashboard()
-            END IF
-        }
-        .addOnFailureListener { error ->
-            showError("Network error: ${error.message}")
-        }
-END FUNCTION
-\end{lstlisting}
-
-
-\subsubsection{Session Management}
-\paragraph{Platform:} Kotlin (Android App)
-\paragraph{Description:} Checks for a locally stored ID on app launch to handle auto-login.
-
-\begin{lstlisting}[language=Kotlin]
-// (SharedPreferences or DataStore Utility)
-FUNCTION saveUserIDLocally(userID: String):
-    localStorage = getSharedPreferences("PocketHomePrefs")
-    localStorage.edit().putString("USER_ID", userID).apply()
-END FUNCTION
-
-FUNCTION loadUserIDLocally(): String?
-    localStorage = getSharedPreferences("PocketHomePrefs")
-    RETURN localStorage.getString("USER_ID", null)
-END FUNCTION
-
-// (In the app's first-run Activity or ViewModel's init)
-FUNCTION checkLoginStatus():
-    userID = CALL loadUserIDLocally()
-    
-    IF userID == null:
-        // If no ID is saved, navigate to Registration
-        navigateToRegistration()
-    ELSE:
-        // If an ID is saved, navigate to Main Dashboard
-        mainViewModel.setUserID(userID)
-        navigateToMainDashboard()
-    END IF
-END FUNCTION
-\end{lstlisting}
-
-
-\subsection{Core Features (Single Screen Interface)}
-
-\subsubsection{Data Synchronization (Real-time Preference Sync)}
-\paragraph{Platform:} Kotlin (Android App) $\rightarrow$ Firebase (Firestore)
-\paragraph{Description:} Updates preferences in the Firestore DB in real-time as the user interacts with UI.
-
-\begin{lstlisting}[language=Kotlin]
-// 1. (Read) Listen for real-time changes from Firestore
-FUNCTION startListeningForPreferences(userID: String):
-    db.collection("users").document(userID)
-        .addSnapshotListener { snapshot, error ->
-            // This block executes automatically
-            // whenever the DB value changes
-            IF snapshot != null AND snapshot.exists():
-                newPrefs = snapshot.toObject(Preferences.class)
-                // Update LiveData or StateFlow 
-                // to automatically reflect changes in the UI
-                _preferenceStateFlow.value = newPrefs
-            END IF
-        }
-END FUNCTION
-
-// 2. (Write) Called when user stops sliding temp slider
-FUNCTION onTemperatureChanged(userID: String, 
-                            newTemp: Double):
-    // (Debounce logic recommended for performance)
-    db.collection("users").document(userID)
-        .update("preferences.temperature", newTemp)
-END FUNCTION
-
-// 3. (Write) Called when user clicks a humidity button
-FUNCTION onHumidityChanged(userID: String, 
-                         newHumidityStep: Int):
-    db.collection("users").document(userID)
-        .update("preferences.humidity", newHumidityStep)
-END FUNCTION
-\end{lstlisting}
-
-
-\subsubsection{Optional Biometric Data Consent}
-\paragraph{Platform:} Kotlin (Android App)
-\paragraph{Description:} Asks for consent when the heart icon is clicked and saves the choice locally.
-
-\begin{lstlisting}[language=Kotlin]
-FUNCTION onHeartIconButtonClick():
-    currentConsent = loadBiometricConsent() // Read local
-    
-    showDialog(
-        title="Biometric Data Collection Consent",
-        message="Allow 'PocketHome' to use heart rate and" +
-                " SpO2 data to improve the AI model?",
-        onConfirm = {
-            saveBiometricConsent(TRUE)
-            CALL startBiometricService() // Consented
-        },
-        onDeny = {
-            saveBiometricConsent(FALSE)
-            CALL stopBiometricService() // Denied
-        }
-    )
-END FUNCTION
-\end{lstlisting}
-
-
-\subsection{Optional Data Integration}
-
-\subsubsection{Biometric Data Transmission}
-\paragraph{Platform:} Kotlin (Android App - Background Service)
-\paragraph{Description:} If consented, periodically (e.g., every 5 min) measures and transmits biometric data to Firestore.
-
-\begin{lstlisting}[language=Kotlin]
-SERVICE BiometricDataWorker:
-    FUNCTION doWork(): // Runs periodically
-        // 1. Re-check consent status
-        consent = loadBiometricConsent()
-        IF consent == FALSE:
-            RETURN Result.failure()
-
-        // 2. Read data from Health Connect API
-        userID = loadUserIDLocally()
-        heartRate = HealthConnect.readLatestHeartRate()
-        spO2 = HealthConnect.readLatestSpO2()
-
-        // 3. Add to a separate log collection
-        logData = {
-            "userID": userID,
-            "heartRate": heartRate,
-            "spO2": spO2,
-            "timestamp": NOW()
-        }
-        db.collection("biometric_logs").add(logData)
-        
-        RETURN Result.success()
-    END FUNCTION
-END SERVICE
-\end{lstlisting}
-
+\subsection{Environmental Preference Controls}
+\begin{itemize}
+    \item \textbf{Temperature:}
+        \begin{itemize}
+            \item \textit{Control:} Stepper control.
+            \item \textit{Range:} 18.0°C \textasciitilde{} 28.0°C.
+            \item \textit{Increment:} Adjustable in units of 0.5°C.
+        \end{itemize}
+    \item \textbf{Humidity:}
+        \begin{itemize}
+            \item \textit{Control:} 5-step segmented button group.
+            \item \textit{Steps:} 5 levels (e.g., ``Very Dry", ``Dry", ``Neutral", ``Humid", ``Very Humid").
+        \end{itemize}
+    \item \textbf{Illumination (Brightness):}
+        \begin{itemize}
+            \item \textit{Control:} Continuous slider.
+            \item \textit{Range:} 0\% (Darkest) \textasciitilde{} 100\% (Brightest).
+\end{itemize}
+\end{itemize}
 
 \subsection{System \& Space Integration}
 
@@ -510,7 +335,7 @@ END SERVICE
 \paragraph{Platform:} Kotlin (Android App - Background Service)
 \paragraph{Description:} Detects current zone via BLE scan and periodically updates user's presence/preferences to the \texttt{presence\_logs} collection.
 
-\begin{lstlisting}[language=Kotlin]
+\begin{lstlisting}
 SERVICE PresenceDetectionWorker:
     currentZone = null
 
@@ -557,7 +382,6 @@ SERVICE PresenceDetectionWorker:
 END SERVICE
 \end{lstlisting}
 
-
 \subsection{Data Utilization (AI Core)}
 \textit{Note: This section is Python code running on the Google Cloud backend, NOT in the Kotlin app.}
 
@@ -565,7 +389,10 @@ END SERVICE
 \paragraph{Platform:} Python (Google Cloud Run / Cloud Function)
 \paragraph{Description:} Triggered every 5 minutes. Aggregates preferences of users in a zone, 'infers' the optimal setting using a pre-trained model, and sends the command to the HVAC system.
 
-\begin{lstlisting}[language=Python]
+% Using 'verbatim' for Python as '#' causes conflicts
+% We wrap in {\small} to control font size
+{\small
+\begin{lstlisting}
 # FUNCTION calculate_optimal_environment(event, context):
 def calculate_optimal_environment(zoneID="Zone_A"):
     # 0. Load the MOP model trained locally
@@ -574,7 +401,7 @@ def calculate_optimal_environment(zoneID="Zone_A"):
     # 1. Aggregate preferences of users in 'Zone_A'
     db = firestore.client()
     users_in_zone = db.collection("presence_logs")
-                        .where("zone", "==", zoneID).get()
+                      .where("zone", "==", zoneID).get()
     
     user_preferences = [] 
     # e.g., [{"temp": 22}, {"temp": 24}]
@@ -605,69 +432,7 @@ def calculate_optimal_environment(zoneID="Zone_A"):
     })
 END FUNCTION
 \end{lstlisting}
-
-
-\subsubsection{Reinforcement Learning Feedback Loop}
-
-\paragraph{A. Feedback Collection (Kotlin App)}
-\textbf{Platform:} Kotlin (Android App) \newline 
-\textbf{Description:} When the user performs a 'Manual Override', this event is sent to Firestore as a 'penalty' log. 
-
-\begin{lstlisting}[language=Kotlin]
-// When user 'forces' a value different from AI's
-FUNCTION onManualOverride(userForcedTemp: Double):
-    userID = loadUserIDLocally()
-    zone = presenceService.currentZone
-    
-    // 1. Read the current AI setting from the DB
-    aiSetting = db.collection("zone_status")
-                    .document(zone).get().ai_setting
-    
-    // 2. Record a 'penalty log' to Firestore
-    feedbackLog = {
-        "userID": userID,
-        "zone": zone,
-        "ai_setting": aiSetting, // The value AI proposed
-        "user_override": userForcedTemp, // The value user forced
-        "timestamp": NOW()
-    }
-    db.collection("override_logs").add(feedbackLog)
-
-    // 3. (Optional) Immediately send override value
-    HVAC_API.set_temperature(zone, userForcedTemp)
-END FUNCTION
-\end{lstlisting}
-
-
-\paragraph{B. Model Retraining (Python - Local PC)}
-\textbf{Platform:} Python (Developer's Local PC) \newline 
-\textbf{Description:} Due to Spark Plan limitations, the developer periodically downloads 'penalty' logs, 'retrains' the RL/MOP model locally, and 'deploys' the new model file to Cloud Run. 
-
-\begin{lstlisting}[language=Python]
-# FUNCTION train_rl_model_offline():
-def train_rl_model_offline():
-    # 1. Download all 'penalty_logs' from Firestore
-    logs = download_collection_from_firestore(
-        "override_logs"
-    )
-
-    # 2. 'Retrain' the RL model based on the logs
-    # (State: ai_setting, Action: user_override, 
-    #  Reward: -abs(ai - user))
-    # ... (RL.train(logs) ...
-    
-    rl_model.save("new_rl_policy_v2.pkl")
-    
-    # 3. Update the MOP model with the new RL policy
-    mop_model.update_policy(rl_model)
-    mop_model.save("mop_model_v2.pkl")
-
-    # 4. Manually deploy new model to Cloud Run
-    # (gcloud run deploy ...
-    
-    PRINT("New model deployed successfully!")
-END FUNCTION
-\end{lstlisting}
+}
 
 
 \end{document}
