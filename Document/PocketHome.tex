@@ -147,7 +147,6 @@ After registration, the app stores the \texttt{User ID} on the device, allowing 
 \subsection{Core Features (Single Screen Interface)}
 \begin{itemize}
     \item \textbf{Single Screen UI:} All core functions (ID verification, preference input) are provided on a single main screen. It displays \texttt{User ID}, \texttt{Temperature}, \texttt{Humidity}, \texttt{Illumination (Brightness)} those can be manually changed, and other preferences such as \texttt{Optional Biometric Data Consent} button and so on.
-\item \textbf{Real-time Update:} As soon as the user changes any of the three preference values (temperature, humidity, illumination), the new value is immediately sent with the \texttt{User ID} to the central database to be updated and stored.
 \end{itemize}
 
 \subsection{Optional Data Integration}
@@ -155,7 +154,7 @@ After registration, the app stores the \texttt{User ID} on the device, allowing 
 \begin{itemize}
     \item \textbf{Heart Rate Sensor:} With user consent, integrates with the smartphone's heart rate sensor (on compatible devices).
     \item \textbf{Blood Oxygen Sensor (SpO2):} With user consent, integrates with the smartphone's blood oxygen saturation sensor (on compatible devices).
-    \item \textbf{Real-time Transmission:} When activated, periodically transmits the real-time measured heart rate data along with the \texttt{User ID} to the central database.
+    \item \textbf{Real-time Transmission:} When activated, periodically transmits the average value of each heart rate and blood oxygen every 5 minutes.
 \end{itemize}
 
 \subsubsection{Personal Profile Attributes}
@@ -222,14 +221,15 @@ After registration, the app stores the \texttt{User ID} on the device, allowing 
 
 \subsection{Programming Language}
 \begin{itemize}
-    \item \textbf{Kotlin}\par
+    \item \textbf{Dart}\par
         \begin{figure}[h]
         \centering
-        \includegraphics[width=.7\columnwidth]{Kotlin.png}
+        \includegraphics[width=.6\columnwidth]{Dart.png}
         \centering
-        \caption{Kotlin} 
+        \caption{Dart} 
         \end{figure}\par
-    Kotlin was chosen primarily because it is Google's official, modern language for native Android development, ensuring the best integration with Android Studio and safer, more concise code through features like null safety. Most importantly, it provides the direct and reliable access to the native SDKs essential for this project's core functionality—specifically, the Bluetooth LE (BLE) API for Presence Detection and the Health Connect API for Biometric Data Transmission—guaranteeing a level of performance and hardware compatibility that cross-platform tools cannot reliably offer.\\[1em]
+    Dart was chosen as the primary language, utilized through the Flutter framework, because it is Google's modern toolkit for building natively compiled applications for mobile, web, and desktop from a single code base. This approach significantly accelerates development and ensures a consistent user experience across platforms. The Dart language itself promotes safer and more concise code through features like robust null safety.
+ \\[1em]
     \item \textbf{Python}\par
         \begin{figure}[h]
         \centering
@@ -237,18 +237,18 @@ After registration, the app stores the \texttt{User ID} on the device, allowing 
         \centering
         \caption{Python}
         \end{figure}\par
-    Python was chosen to power the server-side Data Utilization (AI Core) because it is the definitive industry standard for the complex AI modeling this project requires. Its primary role is to execute the Multi-Objective Optimization (MOP) and Reinforcement Learning (RL) models that form the system's intelligence. This decision leverages Python's unparalleled ecosystem of mature libraries, such as Pymoo for optimization and TensorFlow Agents for reinforcement learning, which are essential for processing aggregated user data. This stack enables a flexible architecture where heavy model training (using feedback logs) is performed offline, while the resulting optimized models are deployed to a serverless environment (like Google Cloud Run) for efficient real-time inference.
+    Python was chosen to power server-side Data Utilization (AI Core) because it is the definitive industry standard for the complex AI modeling this project requires. Its primary role is to execute the Multi-Objective Optimization (MOP) and Reinforcement Learning (RL) models that form the system's intelligence. This decision leverages Python's unparalleled ecosystem of mature libraries, such as Pymoo for optimization and TensorFlow Agents for reinforcement learning, which are essential for processing aggregated user data. This stack enables a flexible architecture where heavy model training (using feedback logs) is performed offline, while the resulting optimized models are deployed to a serverless environment (like Google Cloud Run) for efficient real-time inference.
 \end{itemize}
 \subsection{Software in Use}
 \begin{itemize}
-    \item \textbf{Android Studio}\par
+    \item \textbf{Visual Studio Code}\par
         \begin{figure}[h]
         \centering
-        \includegraphics[width=.6\columnwidth]{AndroidStudio.png}
+        \includegraphics[width=.4\columnwidth]{VSCode.png}
         \centering
-        \caption{Android Studio} 
+        \caption{Visual Studio Code} 
         \end{figure}\par
-    Android Studio was selected as the development environment because its unmatched synergy with Kotlin, Google's official and primary language for the platform, which provides a seamless, optimized development experience that enhances code stability and accelerates production. Critically, this choice guarantees 100\% compatibility with essential native Android SDKs, allowing for the reliable, direct integration of core hardware-centric features like the Bluetooth LE (BLE) API for Presence Detection and the Health Connect API for Biometric Data Transmission through its integrated Gradle system, thereby avoiding the limitations often encountered when using cross-platform frameworks.\\[1em]
+    Visual Studio Code was selected as the development environment due to its unparalleled integration with the Dart language and Flutter framework, providing a lightweight, fast, and highly-optimized workflow. Its best-in-class support for stateful Hot Reload is critical, as it dramatically accelerates the development and debugging cycle. This choice is central to our cross-platform strategy, offering robust tooling to efficiently build, test, and manage the Platform Channels required for deep native integration, thereby ensuring reliable access to core hardware-centric features like the Bluetooth LE (BLE) API for Presence Detection and the Health Connect API for Biometric Data Transmission from a single, unified codebase.\\[1em]
     \item \textbf{Flutter}\par
         \begin{figure}[h]
         \centering
@@ -305,8 +305,9 @@ We will use existing, validated software and algorithms. The Kotlin application 
 
 \subsection{Core Features}
 \begin{itemize}
-    \item \textbf{Optional Biometric Data Consent:} A heart shaped icon in the top-left corner opens a pop-up window where users can consent to the collection of optional biometric data.
-    \item \textbf{Optional Profile Access:} A \texttt{+} (plus) button in the top-right corner. Tapping this button opens an overlay screen (modal) where users can input or delete their optional `Personal Profile Attributes' (e.g., MBTI, sensitivity to cold).
+
+    \item     \textbf{Send Modified Data:} A button in the bottom. Tapping this button sends the modified data to the database so that those can replace the existing ones.
+
 \end{itemize}
 
 \subsection{Environmental Preference Controls}
@@ -327,6 +328,12 @@ We will use existing, validated software and algorithms. The Kotlin application 
             \item \textit{Control:} Continuous slider.
             \item \textit{Range:} 0\% (Darkest) \textasciitilde{} 100\% (Brightest).
 \end{itemize}
+\end{itemize}
+
+\subsection{Optional Data Integration}
+\begin{itemize}
+    \item \textbf{Optional Biometric Data Consent:} A heart shaped icon in the top-left corner opens a pop-up window where users can consent to the collection of optional biometric data.
+    \item \textbf{Optional Profile Access:} A \texttt{+} (plus) button in the top-right corner. Tapping this button opens an overlay screen (modal) where users can input or delete their optional `Personal Profile Attributes' (e.g., MBTI, sensitivity to cold).
 \end{itemize}
 
 \subsection{System \& Space Integration}
