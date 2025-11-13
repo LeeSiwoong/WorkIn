@@ -1,3 +1,3 @@
-# pockethome
+# PocketHome Application
 
-A new Flutter project.
+This application is designed in Flutter, used Dart language.
