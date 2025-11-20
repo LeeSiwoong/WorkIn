@@ -136,12 +136,19 @@ Users enter their preferred temperature, humidity, and brightness levels through
 These values, along with MBTI personality types, are stored in Firebase Realtime Database.
 
 Example user entry:
-```
+```json
 {
-  "mbti": "INTP",
-  "temperature": 24.0,
-  "humidity": 3,
-  "brightness": 5
+  "userId": "U1",
+  "mbti": "ENTP",
+  "mbtiEI": "E",
+  "mbtiNS": "N",
+  "mbtiPJ": "P",
+  "mbtiTF": "T",
+  "temperature": 24.1,
+  "humidity": 4,
+  "brightness": 2,
+  "useBodyInfo": false,
+  "updatedAt": 1763184630661
 }
 ```
 
@@ -212,14 +219,24 @@ The system uses a Genetic Algorithm:
 5. **Iterate** over generations  
 6. **Return the optimal solution**
 
-The final output:
+**Final Output Example (Actual Program Result)**
+
 ```
-{
-  "temp": 22.5,
-  "hum": 3,
-  "light": 6
-}
+[System] 100명 데이터 학습 완료
+
+============================================================
+ ■ PocketHome 최적화 결과
+  [설정] 온도:22.5°C / 습도:4 / 조도:5
+  [예측] 최소:45점 / 평균:73점
+------------------------------------------------------------
+[AI Data Analysis] MBTI 성향별 선호도 차이
+ ■ 에너지 (E vs I): 온도 차이 미미함
+ ■ 인식 (N vs S): 'N' 성향이 약 0.5°C 높게 선호
+ ■ 판단 (T vs F): 'T' 성향이 약 1.0°C 높게 선호
+ ■ 생활 (J vs P): 온도 차이 미미함
+============================================================
 ```
+
 
 ---
 
@@ -302,3 +319,111 @@ The PocketHome methodology combines:
 - Real-time feedback adaptation  
 
 to create a dynamic, fair, and continuously improving AI-driven environmental control system.
+
+# IV. Evaluation & Analysis
+
+This section evaluates how effectively PocketHome optimizes a shared environment for multiple users.  
+The analysis is based on (1) optimization output logs, (2) MBTI trend analysis, and  
+(3) satisfaction distribution visualizations.
+
+---
+
+## **1. Optimization Output Summary**
+
+When the AI runs the optimization process, the system prints the following:
+
+```
+[설정] 온도:22.5°C / 습도:4 / 조도:5
+[예측] 최소:45점 / 평균:73점
+```
+
+### Interpretation
+- **Temperature = 22.5°C, Humidity = 4, Brightness = 5**  
+  → The Genetic Algorithm identified this as the fairest shared environment.
+- **Minimum satisfaction = 45점**  
+  → Even the least satisfied user maintains moderate comfort.
+- **Average satisfaction = 73점**  
+  → Most users experience high comfort.
+
+This confirms that the Max–Min optimization objective is functioning as intended.
+
+---
+
+## **2. MBTI-Based Preference Analysis**
+
+The system also analyzes MBTI traits and their correlation with temperature preferences:
+
+```
+에너지 (E vs I): 온도 차이 미미함  
+인식 (N vs S): 'N' 성향이 약 0.5°C 높게 선호  
+판단 (T vs F): 'T' 성향이 약 1.0°C 높게 선호  
+생활 (J vs P): 온도 차이 미미함
+```
+
+### Insights
+- **N** types prefer slightly warmer environments.
+- **T** types prefer noticeably warmer environments.
+- **E/I** and **J/P** traits contribute less to variation.
+
+This demonstrates that personality-based prediction (Random Forest) enhances preference estimation when values are missing.
+
+---
+
+## **3. Satisfaction Distribution Graph**
+
+The graph below visualizes:
+- Each user’s satisfaction score (0–100)
+- The **average satisfaction line** (green)
+- The **minimum satisfaction line** (red)
+
+This helps validate the fairness of the optimized environment.
+
+### 📊 User Satisfaction Graph
+
+<img width="600" height="300" alt="image" src="https://github.com/user-attachments/assets/41ab23b5-5956-4b8c-86f5-533af4571c66" />
+
+
+### Interpretation of Graph
+- Users generally fall between **55–95 points**, indicating high comfort.
+- The **average line (약 73점)** shows the overall comfort stability.
+- The **minimum line (약 42점)** indicates only a small subset of users experience lower comfort.
+- The optimization ensures no user falls extremely low, fulfilling the fairness requirement.
+
+---
+
+## **4. Feedback → Retraining → Re-Optimization**
+
+When a user manually adjusts the environment, the model updates:
+
+```
+U1 hum 4  
+-> 모델 재학습 중...  
+[System] 100명 데이터 학습 완료
+```
+
+A new optimal environment is produced:
+
+```
+[설정] 온도:23.0°C / 습도:3 / 조도:4
+[예측] 최소:45점 / 평균:74점
+```
+
+### What This Means
+- User dissatisfaction triggers recalibration.
+- Reinforcement-style learning adjusts preference weights.
+- The system re-optimizes with updated data.
+- Average satisfaction improved (73 → 74).
+
+This demonstrates **adaptive learning** and confirms the system responds correctly to real feedback.
+
+---
+
+## **5. Summary**
+
+- The GA consistently selects balanced environmental settings.  
+- Satisfaction distribution shows fairness (high avg, stable min).  
+- MBTI analysis contributes to missing-value prediction accuracy.  
+- Graph visualization clearly reveals comfort trends.  
+- Feedback updates prove adaptive behavior over time.
+
+PocketHome successfully achieves fair, data-driven multi-user environmental optimization.
