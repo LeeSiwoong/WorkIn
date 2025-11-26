@@ -16,7 +16,9 @@ In modern shared environments such as offices, classrooms, and co-working spaces
 
 Furthermore, users generally do not want to repeatedly adjust environmental settings themselves, and the need for continuous manual control often causes inconvenience and stress. To address these issues, we aim to develop an **AI-driven control system that automatically optimizes the environment by incorporating user preferences, behavioral patterns, and real-time biometric and environmental data**.
 
-PocketHome is more than just an IoT automation system—it is designed to function as an **intelligent decision-making model capable of balancing multiple users’ satisfaction simultaneously**.
+Additionally, PocketHome adapts to **time-based tolerance changes** and **biometric indicators** such as stress levels and heart-rate variability. For example, users who remain in the same environment for a long time gradually become more tolerant, while elevated stress or unusual physiological signals trigger stricter comfort adjustments.
+
+PocketHome is more than just an IoT automation system—it is designed to function as an **intelligent decision-making model capable of balancing multiple users’ satisfaction simultaneously** while dynamically adapting to both behavioral and physiological signals.
 
 ---
 
@@ -25,107 +27,171 @@ The final goals of this project are as follows:
 
 1. **Develop an AI optimization system that provides a balanced environment for all users**  
    - We mathematically model the satisfaction functions of multiple users with varying preferences.  
-   - Based on these models, the AI automatically determines the most fair and stable environmental setting.
+   - Based on these models, the AI automatically determines the most fair and stable environmental setting using fuzzy logic and genetic optimization.
 
-2. **Enable continuous improvement through learning from user interactions**  
-   - Using reinforcement learning, the system interprets user adjustments (e.g., changing the temperature manually) as feedback.  
-   - This feedback is used to refine individual satisfaction models over time.
+2. **Enable continuous improvement through learning from user interactions and physiological signals**  
+   - The system updates user models not only when users manually adjust the environment but also when **biometric indicators** (e.g., stress level, heart-rate variability) suggest discomfort.  
+   - Additionally, the system incorporates **time-based tolerance adaptation**, allowing user comfort curves to gradually change as time passes.  
+   - These factors work together to refine satisfaction models over time.
 
 3. **Create an autonomous environment that requires minimal user intervention**  
-   - As the system learns implicit user preferences, it gradually converges toward a **Pareto-optimal environmental state** where no user experiences significant discomfort.
+   - As the system learns implicit user preferences and physiological states, it gradually converges toward a **Pareto-optimal environmental state** where no user experiences significant discomfort.  
+   - The environment reacts proactively when stress is high or when physiological instability is detected, reducing the need for manual adjustments.
 
 4. **Implement a functional prototype integrated with real IoT devices**  
-   - Using Firebase for real-time data synchronization, the system can autonomously control HVAC, lighting, and air purification devices.
+   - Using Firebase for real-time data synchronization, the system can autonomously control HVAC, lighting, and air purification devices based on optimized environmental settings.
 
 Ultimately, our vision is to create **“an environment that adapts to people,” rather than forcing people to adapt to their environment.**  
 This is the core mission of the PocketHome project.
 
+
 # II. Datasets
 
 ### **1. Overview**
-The dataset used in the PocketHome system consists of multi-user environmental preferences and personality traits. All data is stored and updated in **Firebase Realtime Database**, allowing the AI system to dynamically read user profiles, predict missing values, and perform optimization based on real-time user information.
+The dataset used in the PocketHome system includes user environmental preferences, personality traits, time-based adaptation data, and optional biometric information. All data is stored in **Firebase Realtime Database**, allowing the AI engine to dynamically update preferences, re-learn user models, and optimize the environment in real time.
 
 The dataset is used for:
-- Constructing satisfaction models for each user  
-- Predicting missing preferences from MBTI  
-- Running multi-objective optimization algorithms  
-- Updating user preference models after feedback  
+- Constructing fuzzy satisfaction models  
+- Predicting missing preferences using MBTI  
+- Running multi-user optimization algorithms  
+- Adjusting user comfort models using feedback, time decay, and biometric signals  
 
 ---
 
 ### **2. Data Sources**
 
 #### **(1) User-Provided Static Preferences**
-Users directly input their preferred environmental settings through the WorkIn app. These serve as the core dataset for initial modeling.
+Users directly input their preferred environmental settings through the WorkIn app.
 
 | Parameter | Range | Description |
 |----------|--------|-------------|
-| Temperature | 18–28°C (0.5 step) | Desired room temperature |
+| Temperature | 18–28°C (0.5 step) | Preferred temperature |
 | Humidity | 1–5 | Preferred humidity level |
-| Brightness | 0–10 | Preferred lighting level |
-| MBTI | 4-letter type | Personality trait used for ML-based prediction (may contain missing values) |
+| Brightness | 0–10 | Preferred brightness |
+| MBTI | 4-letter type | Used for preference prediction |
 
-These values are stored per user in Firebase and retrieved by the AI engine.
+These preferences serve as the baseline for satisfaction modeling.
 
 ---
 
-### **3. Firebase Database Structure**
-The live dataset is structured as follows:
-<img width="230" height="306" alt="image" src="https://github.com/user-attachments/assets/3566e42a-310c-40e9-8b20-a041ba79c9a9" />
+#### **(2) Time-Based Adaptation Data**
+Each user contains an `updatedAt` timestamp stored in **UNIX milliseconds**:
 
-Each user has a profile that may contain partial or full preferences.
+```json
+"updatedAt": 1763184630661
+```
+
+This value is used to compute:
+
+- **timeDiff**: minutes since last update  
+- **adaptationFactor = min(timeDiff / 60, 1.0)**
+
+The longer a user remains in the same environment, the **more tolerant** they become, increasing the temperature tolerance dynamically.
+
+---
+
+#### **(3) Biometric Signals (Optional)**
+If `useBodyInfo` is enabled, biometric data is included:
+
+```json
+"bodyMetrics": {
+  "stressAvg": 50,
+  "heartRateVariation": 10
+}
+```
+
+Biometric effects:
+- **stressAvg > 70**  
+  - target temperature −1.0°C  
+  - temperature tolerance ×0.7  
+  - satisfaction penalty = (stress% × 0.2)
+
+- **heartRateVariation > 20**  
+  - target temperature −0.5°C
+
+These signals help detect hidden discomfort even without manual adjustments.
+
+---
+
+### **3. Firebase Database Structure (Latest Version)**
+
+```json
+{
+  "userId": "U1",
+  "mbti": "ENTP",
+  "temperature": 24.1,
+  "humidity": 4,
+  "brightness": 2,
+  "updatedAt": 1763184630661,
+  "useBodyInfo": true,
+  "bodyMetrics": {
+    "stressAvg": 50,
+    "heartRateVariation": 10
+  }
+}
+```
+
+Each user profile may include:
+- Static preferences  
+- MBTI information  
+- Time-based adaptation data  
+- Biometric indicators  
 
 ---
 
 ### **4. Dataset Usage in the AI System**
 
-#### **(1) Nonlinear Satisfaction Modeling (Fuzzy Logic)**
-Each user’s temperature, humidity, and brightness preferences are transformed into a continuous satisfaction score using Gaussian-based fuzzy logic.  
-This allows the system to compute how close the current environment is to each user’s ideal condition.
+#### **(1) Dynamic Satisfaction Modeling (Fuzzy Logic)**
+Temperature satisfaction uses a **dynamic tolerance** influenced by:
+- timeSinceLastUpdate  
+- stress level  
+- heart-rate variability  
+
+Humidity and brightness use fixed tolerances.
 
 ---
 
-#### **(2) Preference Prediction (Random Forest Regression)**
-If a user has incomplete data (e.g., missing temperature or humidity values), the system predicts these values using Random Forest models trained on MBTI → preference mappings.
-
-This prevents missing data from disrupting optimization.
+#### **(2) Preference Prediction (Random Forest)**
+Missing preferences are predicted based on MBTI traits using RandomForestRegressor.
 
 ---
 
 #### **(3) Optimization Dataset**
-The dataset is used to evaluate:
-- Minimum satisfaction score  
-- Average satisfaction score  
-- Best environment setting for multiple users  
-
-During optimization, thousands of virtual environment combinations are scored using these datasets.
+Used to compute:
+- Minimum satisfaction  
+- Average satisfaction  
+- A fair multi-user environmental setting via Genetic Algorithm  
 
 ---
 
-#### **(4) Feedback-Based Updates**
-When a user manually adjusts temperature, humidity, or lighting:
-- The value is updated in Firebase  
-- The ML model is retrained  
-- Optimization is recalculated  
+#### **(4) Feedback & Biometric-Based Updates**
+When a user changes an environment value:
+- Firebase values update  
+- `updatedAt` timestamp refreshes  
+- ML models retrain  
+- Optimization re-runs  
 
-This makes the dataset **dynamic**, always reflecting the latest user behavior.
-
----
-
-### **5. Notes on Future Expansion**
-Biometric data (e.g., heart rate fluctuations, oxygen saturation) and behavioral signals are *not yet included* in the current dataset.  
-However, these elements are planned for future versions and can further enhance accuracy in satisfaction modeling and reinforcement learning.
+When biometric triggers activate:
+- satisfaction dynamically decreases  
+- target temperature shifts  
+- tolerance recalculates  
 
 ---
 
 ### **Summary**
-The PocketHome dataset is a live collection of user preferences and personality-based features stored in Firebase. It enables real-time modeling, prediction, optimization, and adaptive control of shared indoor environments.
+The PocketHome dataset is a **live, adaptive data structure** combining:
+- User preferences  
+- Personality-based predictions  
+- Time-driven tolerance changes  
+- Biometric indicators  
+
+This rich dataset enables fair and intelligent multi-user environmental optimization.
 
 # III. Methodology
 
 The PocketHome system follows a three-phase pipeline:  
 **(1) Initial Setup and Modeling → (2) Multi-Objective Optimization → (3) Continuous Learning Loop.**  
-This ensures that the environment is optimized for multiple users at once and continuously adapts to feedback.
+This ensures that the environment is optimized for multiple users at once and continuously adapts to feedback, time-based tolerance, and biometric signals.
 
 ---
 
@@ -133,21 +199,17 @@ This ensures that the environment is optimized for multiple users at once and co
 
 ### **(1) Collecting User Preferences**
 Users enter their preferred temperature, humidity, and brightness levels through the WorkIn app.  
-These values, along with MBTI personality types, are stored in Firebase Realtime Database.
+These values, along with MBTI personality types and optional biometric settings, are stored in Firebase Realtime Database.
 
 Example user entry:
 ```json
 {
   "userId": "U1",
   "mbti": "ENTP",
-  "mbtiEI": "E",
-  "mbtiNS": "N",
-  "mbtiPJ": "P",
-  "mbtiTF": "T",
   "temperature": 24.1,
   "humidity": 4,
   "brightness": 2,
-  "useBodyInfo": false,
+  "useBodyInfo": true,
   "updatedAt": 1763184630661
 }
 ```
@@ -156,169 +218,150 @@ These static inputs serve as the baseline for satisfaction modeling.
 
 ---
 
-### **(2) Satisfaction Function Modeling (Fuzzy Logic)**  
-The system converts each user's preferences into a **continuous satisfaction function** using Gaussian-based fuzzy logic:
+### **(2) Satisfaction Function Modeling (Fuzzy Logic with Dynamic Tolerance)**
+
+The system converts each user’s preferences into a continuous satisfaction function using Gaussian-based fuzzy logic:
 
 ```math
 S(x) = e^{-(x - target)^2 / (2 \cdot tolerance^2)}
 ```
 
+However, the **tolerance value is dynamic**, influenced by:
 
-- The closer the environment is to the preferred value, the higher the satisfaction score.  
-- Different weights are used:  
-  - Temperature: 50%  
-  - Humidity: 30%  
-  - Brightness: 20%
+- **Time since last update (`updatedAt`)**  
+  - Longer duration → higher adaptation factor → wider tolerance  
+- **Stress level (bodyMetrics.stressAvg)**  
+  - stress > 70 → tolerance × 0.7  
+- **Heart-rate variability (bodyMetrics.heartRateVariation)**
 
-This creates individualized comfort curves for every user.
+This makes temperature satisfaction context-aware and physiologically adaptive.
+
+Weights used:
+- Temperature: 50%  
+- Humidity: 30%  
+- Brightness: 20%
 
 ---
 
-### **(3) Preference Prediction (Random Forest Regression)**  
-Some users may have incomplete data (e.g., only an MBTI type).  
-To prevent missing values from breaking the optimization pipeline, the system predicts missing parameters using RandomForestRegressor models:
+### **(3) Biometric and Behavioral Adjustment**
 
-- Temperature Model  
-- Humidity Model  
-- Brightness Model  
+If `useBodyInfo = true`, the system adjusts comfort models using physiological indicators:
 
-Training data comes from existing user entries.  
-This enables the system to infer environmental preferences from personality traits.
+- **stressAvg > 70**
+  - Target temperature reduced by **1.0°C**
+  - Satisfaction penalty = stress% × 0.2
+- **heartRateVariation > 20**
+  - Target temperature reduced by **0.5°C**
+
+These adjustments help detect hidden discomfort even when the user does not manually change settings.
+
+---
+
+### **(4) Preference Prediction (Random Forest Regression)**
+Some users may have missing data.  
+To prevent this from breaking the pipeline, the system uses RandomForestRegressor models to predict:
+
+- Temperature  
+- Humidity  
+- Brightness  
+
+based on MBTI patterns observed in other users.
 
 ---
 
 ## **2. Phase 2: Multi-Objective Optimization (MOP)**
 
 ### **(1) Defining the Objective Function**
-To determine the “best” environment, the system aggregates satisfaction scores from all active users.
-
-PocketHome uses a **Max–Min fairness strategy**:
-
-- The optimal environment is the one that **maximizes the minimum satisfaction** among all users.  
-- Ensures fairness and prevents any user from experiencing extreme discomfort.
+The system aggregates satisfaction scores from all users and applies a **Max–Min fairness objective**:
 
 ```math
-Goal = max( min(S_1, S_2, ..., S_n) )
+Goal = \max ( \min(S_1, S_2, ..., S_n) )
 ```
+
+This ensures no user experiences extreme discomfort.
 
 ---
 
 ### **(2) Optimization via Genetic Algorithm (GA)**  
-To search through thousands of possible combinations of:
+Search space:
 
-- Temperature (18–28°C, 0.5 steps)  
+- Temperature (18–28°C, 0.5 step)  
 - Humidity (1–5)  
 - Brightness (0–10)
 
-The system uses a Genetic Algorithm:
+Procedure:
 
-1. **Generate random candidate environments**  
-2. **Evaluate fitness** (minimum + average satisfaction)  
-3. **Select best-performing candidates**  
-4. **Apply crossover & mutation**  
-5. **Iterate** over generations  
-6. **Return the optimal solution**
+1. Generate random environment candidates  
+2. Evaluate fitness (minimum + average satisfaction)  
+3. Select best candidates  
+4. Apply crossover & mutation  
+5. Iterate over generations  
+6. Return the optimal solution
 
-**Final Output Example (Actual Program Result)**
+**Example Output (Actual Program Result)**
 
 ```
-[System] 100명 데이터 학습 완료
-
-============================================================
- ■ PocketHome 최적화 결과
-  [설정] 온도:22.5°C / 습도:4 / 조도:5
-  [예측] 최소:45점 / 평균:73점
-------------------------------------------------------------
-[AI Data Analysis] MBTI 성향별 선호도 차이
- ■ 에너지 (E vs I): 온도 차이 미미함
- ■ 인식 (N vs S): 'N' 성향이 약 0.5°C 높게 선호
- ■ 판단 (T vs F): 'T' 성향이 약 1.0°C 높게 선호
- ■ 생활 (J vs P): 온도 차이 미미함
-============================================================
+[설정] 온도:22.5°C / 습도:4 / 조도:5
+[예측] 최소:45점 / 평균:73점
 ```
-
 
 ---
 
-## **3. Phase 3: Continuous Learning Loop (Reinforcement Learning Concept)**  
+## **3. Phase 3: Continuous Learning Loop**
 
 ### **(1) Real-Time Feedback Collection**
-While the environment is applied:
+- No manual changes → **positive feedback**  
+- User changes environment → **negative feedback**
 
-- If users do **not** manually change temperature/humidity/light → **positive feedback**  
-- If a user **manually adjusts** a setting → **negative feedback**
+### **(2) Model Update**
+- Update Firebase values  
+- Recalculate tolerance based on time  
+- Apply biometric adjustments  
+- Retrain Random Forest  
+- Re-run optimization
 
-This feedback indicates whether the current optimized environment matches real user comfort.
-
----
-
-### **(2) Model Update After Feedback**
-When negative feedback occurs:
-
-- The user's stored preference in Firebase is updated  
-- The satisfaction model is recalibrated  
-- The Random Forest predictor is retrained  
-- Optimization is re-run with new user data
-
-This mimics the behavior of reinforcement learning, where the system continuously adapts based on interaction.
-
----
-
-### **(3) Re-Optimization & Environment Adjustment**
-After updating preferences:
-
-1. Run Genetic Algorithm again  
-2. Compute a new optimal environment  
-3. Apply updated settings  
-4. Repeat the loop
-
-This leads the system to eventually converge to a **Pareto-optimal** environment where everyone experiences balanced comfort.
+### **(3) Re-Optimization**
+This loop drives the system toward a **Pareto-optimal state** where satisfaction is balanced.
 
 ---
 
 ## **4. Visualization & Analysis**
-The system uses `matplotlib` to generate graphs showing:
+The system visualizes:
 
 - Individual satisfaction scores  
-- Average satisfaction  
-- Minimum satisfaction  
+- Mean and minimum scores  
+- MBTI-based preference differences  
 
-This visual feedback helps evaluate how fair and effective the optimized environment is for a group.
+This helps analyze fairness and performance.
 
 ---
 
-### Why These Algorithms?
+## **Why These Algorithms?**
 
-- **Fuzzy Logic**  
-  Used to model non-linear human satisfaction. Environmental comfort is not a linear function, and fuzzy Gaussian curves fit real human perception more naturally.
+- **Fuzzy Logic with dynamic tolerance**  
+  Captures human comfort more realistically and adapts to time and biometric signals.
 
-- **Random Forest (scikit-learn)**  
-  Chosen for predicting missing preferences from MBTI. It handles small datasets well, prevents overfitting, and is easy to train dynamically.
+- **Random Forest Regression**  
+  Predicts missing values robustly even with small datasets.
 
 - **Genetic Algorithm**  
-  Optimal for searching large combination spaces (temperature × humidity × brightness). Traditional gradient-based methods cannot be used due to the non-differentiable satisfaction function.
+  Handles non-linear, multi-dimensional search spaces efficiently.
 
-- **Max–Min objective function**  
-  Ensures fairness by maximizing the minimum satisfaction rather than total sum. Perfect for shared spaces where equality matters.
+- **Max–Min Objective Function**  
+  Ensures fairness in multi-user environments.
 
-### Code Features
-
-- `calculate_satisfaction()` implements Gaussian fuzzy scoring.
-- `RandomForestRegressor` predicts missing environmental preferences.
-- `optimize_environment()` performs GA optimization over thousands of virtual environments.
-- `apply_feedback()` updates Firebase data and retrains the model dynamically.
-- `show_graph()` visualizes satisfaction distribution with min/avg lines
-
+---
 
 ## **Summary**
-The PocketHome methodology combines:
+PocketHome integrates:
 
-- Fuzzy Logic  
-- Machine Learning (Random Forest)  
-- Genetic Algorithms  
-- Real-time feedback adaptation  
+- Fuzzy satisfaction curves  
+- Dynamic tolerance (time & biometric-based)  
+- Machine learning prediction  
+- Genetic optimization  
+- Reinforcement-style continuous feedback  
 
-to create a dynamic, fair, and continuously improving AI-driven environmental control system.
+to maintain a fair, adaptive, and intelligent indoor environment.
 
 # IV. Evaluation & Analysis
 
