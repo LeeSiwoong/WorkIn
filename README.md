@@ -12,180 +12,252 @@ AI-driven Environmental Optimization Through Multi-User Preference Mediation [Po
 # I. Introduction
 
 ### **Motivation: Why are you doing this?**
-In modern shared environments such as offices, classrooms, and co-working spaces, multiple users often occupy the same physical area while having different preferences for temperature, humidity, and lighting. However, most existing environmental control systems rely on a single user’s input or apply a uniform setting to everyone. This frequently leads to discomfort for certain individuals and inefficient operation of HVAC and lighting systems.
+In modern shared environments such as offices, classrooms, and co-working spaces, **multiple users often occupy the same physical area while having different preferences** for temperature, humidity, and lighting. However, most existing environmental control systems rely on **a single user’s input** or apply **a uniform setting** to everyone. This frequently leads to discomfort for certain individuals and inefficient operation of HVAC and lighting systems.
 
 Furthermore, users generally do not want to repeatedly adjust environmental settings themselves, and the need for continuous manual control often causes inconvenience and stress. To address these issues, we aim to develop an **AI-driven control system that automatically optimizes the environment by incorporating user preferences, behavioral patterns, and real-time biometric and environmental data**.
 
-Additionally, PocketHome adapts to **time-based tolerance changes** and **biometric indicators** such as stress levels and heart-rate variability. For example, users who remain in the same environment for a long time gradually become more tolerant, while elevated stress or unusual physiological signals trigger stricter comfort adjustments.
+Additionally, PocketHome adapts to **time-based changes in user sensitivity** and **biometric indicators** such as stress levels and heart-rate variability. For example, users who remain in the same environment for a long time may gradually become less sensitive to small changes, while elevated stress or unusual physiological signals trigger stricter or more cautious adjustments.
 
-PocketHome is more than just an IoT automation system—it is designed to function as an **intelligent decision-making model capable of balancing multiple users’ satisfaction simultaneously** while dynamically adapting to both behavioral and physiological signals.
+PocketHome is more than just an IoT automation system—it is designed to function as an **intelligent decision-making model capable of balancing multiple users’ satisfaction simultaneously**, while dynamically adapting to both behavioral and physiological signals.
 
 ---
 
 ### **What do you want to see at the end?**
 The final goals of this project are as follows:
 
-1. **Develop an AI optimization system that provides a balanced environment for all users**  
-   - We mathematically model the satisfaction functions of multiple users with varying preferences.  
-   - Based on these models, the AI automatically determines the most fair and stable environmental setting using fuzzy logic and genetic optimization.
+1. **Develop an AI-driven environment control system that fairly reflects all users' needs**  
+   - Instead of relying on a single fixed satisfaction function, PocketHome learns **user sensitivity (weight)** based on personality traits, behavior patterns, and biometric conditions.  
+   - The system uses these learned weights to determine a fair and stable environmental setting for the entire group.
 
-2. **Enable continuous improvement through learning from user interactions and physiological signals**  
-   - The system updates user models not only when users manually adjust the environment but also when **biometric indicators** (e.g., stress level, heart-rate variability) suggest discomfort.  
-   - Additionally, the system incorporates **time-based tolerance adaptation**, allowing user comfort curves to gradually change as time passes.  
-   - These factors work together to refine satisfaction models over time.
+2. **Enable continuous improvement through real-time data and biometric signals**  
+   - The AI model updates user weights not only when users manually adjust the environment but also when **physiological indicators** (e.g., stress level, heart-rate variability) detect discomfort.  
+   - Additionally, the system incorporates **time-based sensitivity decay**, allowing a user’s influence to change naturally over time.  
+   - These dynamic factors enable PocketHome to adapt continuously as user conditions shift.
 
-3. **Create an autonomous environment that requires minimal user intervention**  
-   - As the system learns implicit user preferences and physiological states, it gradually converges toward a **Pareto-optimal environmental state** where no user experiences significant discomfort.  
-   - The environment reacts proactively when stress is high or when physiological instability is detected, reducing the need for manual adjustments.
+3. **Create an autonomous environment that minimizes user intervention**  
+   - By learning implicit user tendencies—such as when users are stressed, calm, or acclimated—the system generates environment settings that reduce the need for manual control.  
+   - The model aims to reach **a stable equilibrium** where all users’ influences are proportionally balanced according to their current sensitivity levels.
 
-4. **Implement a functional prototype integrated with real IoT devices**  
-   - Using Firebase for real-time data synchronization, the system can autonomously control HVAC, lighting, and air purification devices based on optimized environmental settings.
+4. **Implement a functional client–server prototype connected with real IoT and mobile systems**  
+   - The **mobile app** collects user preferences and biometric data into Firebase Firestore.  
+   - The **AI server** trains and updates the weight model, providing real-time model parameters to end-host devices.  
+   - **End hosts** compute the final environment setting using the server-provided weights and apply it to local IoT devices.
 
-Ultimately, our vision is to create **“an environment that adapts to people,” rather than forcing people to adapt to their environment.**  
-This is the core mission of the PocketHome project.
+Ultimately, our vision is to create **“an environment that adapts to people,” rather than forcing people to adapt to their environment.”**  
+This reflects the core mission of the PocketHome project.
 
 
 # II. Datasets
 
 ### **1. Overview**
-The dataset used in the PocketHome system includes user environmental preferences, personality traits, time-based adaptation data, and optional biometric information. All data is stored in **Firebase Realtime Database**, allowing the AI engine to dynamically update preferences, re-learn user models, and optimize the environment in real time.
+The PocketHome system uses a unified dataset stored in **Firebase Firestore**.  
+Each user is represented as a document containing:
 
-The dataset is used for:
-- Constructing fuzzy satisfaction models  
-- Predicting missing preferences using MBTI  
-- Running multi-user optimization algorithms  
-- Adjusting user comfort models using feedback, time decay, and biometric signals  
+- Environmental preferences (temperature, humidity, brightness)  
+- Personality traits (MBTI and its decomposed dimensions)  
+- Optional biometric information (stress level, heart-rate variation)  
+- Time-related metadata indicating how recent the data is  
+
+This dataset is primarily used by the **Weight Model Server**, which:
+
+- Reads user documents from Firestore  
+- Learns how strongly each user should influence the final environment (user weight)  
+- Exports the learned model as a JSON structure for end-host devices
+
+End-host devices then use:
+
+- The latest user documents from Firestore  
+- The weight model provided by the server  
+
+to compute a **weighted environmental setting** (temperature, humidity, brightness) that reflects the influence of all users fairly and adaptively.
 
 ---
 
 ### **2. Data Sources**
 
-#### **(1) User-Provided Static Preferences**
-Users directly input their preferred environmental settings through the WorkIn app.
-
-| Parameter | Range | Description |
-|----------|--------|-------------|
-| Temperature | 18–28°C (0.5 step) | Preferred temperature |
-| Humidity | 1–5 | Preferred humidity level |
-| Brightness | 0–10 | Preferred brightness |
-| MBTI | 4-letter type | Used for preference prediction |
-
-These preferences serve as the baseline for satisfaction modeling.
+PocketHome uses four main categories of data for each user.
 
 ---
 
-#### **(2) Time-Based Adaptation Data**
-Each user contains an `updatedAt` timestamp stored in **UNIX milliseconds**:
+#### **(1) User-Provided Environmental Preferences**
+
+Users directly input their preferred environment through the mobile app.
+
+| Parameter   | Range              | Description                |
+|------------|--------------------|----------------------------|
+| temperature | 18–28°C (0.1 step) | Preferred room temperature |
+| humidity    | 1–5                | Preferred humidity level   |
+| brightness  | 1–10               | Preferred light level      |
+
+These values represent the user’s baseline environmental choices.
+
+---
+
+#### **(2) Personality Traits (MBTI Decomposed)**
+
+The system stores both the overall MBTI string and each MBTI dimension separately:
 
 ```json
-"updatedAt": 1763184630661
+{
+  "mbti": "ENTP",
+  "mbtiEI": "E",
+  "mbtiNS": "N",
+  "mbtiTF": "T",
+  "mbtiPJ": "P"
+}
 ```
-
-This value is used to compute:
-
-- **timeDiff**: minutes since last update  
-- **adaptationFactor = min(timeDiff / 60, 1.0)**
-
-The longer a user remains in the same environment, the **more tolerant** they become, increasing the temperature tolerance dynamically.
-
 ---
 
-#### **(3) Biometric Signals (Optional)**
-If `useBodyInfo` is enabled, biometric data is included:
+#### **(3) Biometric Measurements (Optional)**
+If the user allows biometric usage, the app uploads recent physiological information:
 
 ```json
+"useBodyInfo": true,
 "bodyMetrics": {
-  "stressAvg": 50,
-  "heartRateVariation": 10
+  "collectedAt": "202512021959",
+  "stressAvg": 63,
+  "heartRateVariation": 12
+}
+```
+- collectedAt : Timestamp of when the biometric data was measured
+
+- stressAvg : Average stress score during a recent period
+
+- heartRateVariation : Variation in heart rate (proxy for physiological fluctuation)
+
+#### **(4) Time-Based Sensitivity Metadata**
+
+Each user document stores a timestamp indicating when their preferences were last updated:
+
+```json
+{
+  "updatedAt": "202512022210"
 }
 ```
 
-Biometric effects:
-- **stressAvg > 70**  
-  - target temperature −1.0°C  
-  - temperature tolerance ×0.7  
-  - satisfaction penalty = (stress% × 0.2)
-
-- **heartRateVariation > 20**  
-  - target temperature −0.5°C
-
-These signals help detect hidden discomfort even without manual adjustments.
-
 ---
 
-### **3. Firebase Database Structure (Latest Version)**
+### **3. Firestore Database Structure (Latest Version)**
 
 ```json
 {
   "userId": "U1",
   "mbti": "ENTP",
+  "mbtiEI": "E",
+  "mbtiNS": "N",
+  "mbtiTF": "T",
+  "mbtiPJ": "P",
+
   "temperature": 24.1,
   "humidity": 4,
   "brightness": 2,
-  "updatedAt": 1763184630661,
+
+  "updatedAt": "202512022210",
+
   "useBodyInfo": true,
   "bodyMetrics": {
-    "stressAvg": 50,
-    "heartRateVariation": 10
+    "collectedAt": "2025-12-02T17:29:37.573324",
+    "stressAvg": 63,
+    "heartRateVariation": 12
   }
 }
 ```
 
 Each user profile may include:
-- Static preferences  
-- MBTI information  
-- Time-based adaptation data  
-- Biometric indicators  
+- Static environmental preferences (temperature, humidity, brightness)
+- MBTI type and decomposed personality dimensions (mbtiEI, mbtiNS, mbtiTF, mbtiPJ)
+- Time-based metadata (updatedAt) for sensitivity decay 
+- Optional biometric indicators under bodyMetrics (stressAvg, heartRateVariation, collectedAt)
 
 ---
 
 ### **4. Dataset Usage in the AI System**
 
-#### **(1) Dynamic Satisfaction Modeling (Fuzzy Logic)**
-Temperature satisfaction uses a **dynamic tolerance** influenced by:
-- timeSinceLastUpdate  
-- stress level  
-- heart-rate variability  
+The PocketHome system uses the Firestore dataset in two main components:
+1. The **Weight Model Server**, which learns how strongly each user should influence the final environment
+2. The **End-Host Device**, which calculates the shared environmental settings
 
-Humidity and brightness use fixed tolerances.
+#### **(1) Weight Model Training (Server-Side)**
+The server reads user documents from Firestore and converts them into feature vectors.
+Each user contributes the following types of data:
+- Environmental preferences  
+- Personality traits (full MBTI + decomposed fields)
+- Optional biometric indicators
+- Time-based freshness information
+
+Based on these values, the server generates a **weight label** for each user:
+- Higher stress → higher weight
+- Recent updates → higher weight
+- Stale data → lower weight
+- Missing biometric data → neutral/ignored
+
+A RandomForestRegressor is trained to predict weights.
+
+The trained model is exported as JSON and served through the following endpoint:
+```bash
+GET /weight-model
+```
 
 ---
 
-#### **(2) Preference Prediction (Random Forest)**
-Missing preferences are predicted based on MBTI traits using RandomForestRegressor.
+#### **(2) Model-Based Environment Calculation (End Host)**
+The end host performs three steps:
+**1.** Fetch user data from Firestore
 
+**2.** Download the latest weight model from the server
+
+**3.** Compute the weighted environmental settings
+
+Weighted average formula:
+```java
+Final Temperature = Σ(weight_i × temp_i) / Σ(weight_i)
+Final Humidity    = Σ(weight_i × hum_i) / Σ(weight_i)
+Final Brightness  = Σ(weight_i × bright_i) / Σ(weight_i)
+```
+This ensures that:
+- Users under greater stress influence the result more
+
+- Users with recent updates weigh more
+
+- Users with outdated or missing data weigh less
+
+- MBTI traits contribute subtle adjustments
 ---
 
-#### **(3) Optimization Dataset**
-Used to compute:
-- Minimum satisfaction  
-- Average satisfaction  
-- A fair multi-user environmental setting via Genetic Algorithm  
+#### **(3) Continuous Adaptation**
+Whenever any user updates:
+- their environmental preferences
+
+- their MBTI information
+
+- their biometric data
+
+- or simply when time passes
+
+PocketHome automatically adapts:
+- The weight model retrains
+
+- End-host devices recalculate the environment
+
+- The applied environment updates dynamically
+
+This enables PocketHome to continuously reflect both behavioral and physiological changes.
 
 ---
-
-#### **(4) Feedback & Biometric-Based Updates**
-When a user changes an environment value:
-- Firebase values update  
-- `updatedAt` timestamp refreshes  
-- ML models retrain  
-- Optimization re-runs  
-
-When biometric triggers activate:
-- satisfaction dynamically decreases  
-- target temperature shifts  
-- tolerance recalculates  
 
 ---
 
 ### **Summary**
-The PocketHome dataset is a **live, adaptive data structure** combining:
-- User preferences  
-- Personality-based predictions  
-- Time-driven tolerance changes  
-- Biometric indicators  
+The Firestore dataset powers the entire AI pipeline by providing:
+- Environmental preferences
 
-This rich dataset enables fair and intelligent multi-user environmental optimization.
+- Personality traits
+
+- Time-based metadata
+
+- Biometric signals
+
+The Weight Model Server learns weights, and End-Host devices compute the real-time shared environment using these learned weights.
 
 # III. Methodology
 
