@@ -1,1 +1,1 @@
-enter the codes when you used on configurating virtual machine.
+nohup sudo env "PATH=$PATH" python3 -m uvicorn weight_model_server:app --host 0.0.0.0 --port 80 > weight_model.log 2>&1 &
