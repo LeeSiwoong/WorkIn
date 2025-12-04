@@ -1,0 +1,704 @@
+\documentclass[conference]{IEEEtran}
+
+% ===== REQUIRED PACKAGES =====
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{float}
+\usepackage{upquote}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{xurl}
+\usepackage[colorlinks=false]{hyperref}
+\definecolor{lightgray}{rgb}{0.95, 0.95, 0.95}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{codeblue}{rgb}{0.0,0.0,0.6}
+\lstdefinelanguage{Kotlin}{
+  keywords={FUNCTION, IF, ELSE, RETURN, END, CALL, VAR, TRUE, FALSE, NULL, class, interface, companion, object, val, var, fun, is, in, data, enum, package, import, where, new, try, catch, finally, for, while, do, when, throw, break, continue, typeof},
+  sensitive=true,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]"""
+}
+\lstdefinestyle{codestyle}{
+    basicstyle=\ttfamily\scriptsize,  % Small tt font
+    breaklines=true,                 % Auto-wrap long lines
+    breakatwhitespace=true,          % Wrap at spaces
+    frame=tb,                        % Simple frame top and bottom
+    framesep=3pt,
+    numbers=none,                    % --- NO line numbers ---
+    captionpos=b,                    % Caption position (none will be used)
+    aboveskip=1.5\medskipamount,     % Space above code
+    belowskip=1.5\medskipamount,     % Space below code
+    showstringspaces=false,
+    % --- FIX for Python/Kotlin comments ---
+    commentstyle=\color{codegreen},  % Set comment color
+    morecomment=[l]{//},             % Define // as a line comment
+    morecomment=[l]{\#}              % Define # as a line comment
+}
+
+% Set this 'codestyle' as the default for all lstlisting environments
+\lstset{style=codestyle}
+
+
+% ===== DOCUMENT START =====
+\begin{document}
+
+% --- Paper Title ---
+\title{PocketHome: AI-driven Environmental Optimization Through Multi-User Preference Mediation}
+
+% --- Author Information ---
+\author{
+    \IEEEauthorblockN{Siwoong Lee}
+    \IEEEauthorblockA{\textit{Dept. of Information System} \\
+    \textit{Hanyang University}\\
+    Seoul, Korea \\
+    bluewings02@hanyang.ac.kr}
+    \and
+    \IEEEauthorblockN{Jaebeom Park}
+    \IEEEauthorblockA{\textit{Dept. of Information System} \\
+    \textit{Hanyang University}\\
+    Seoul, Korea \\
+    tony0604@hanyang.ac.kr}
+    \and
+    \IEEEauthorblockN{Yuanjae Jang}
+    \IEEEauthorblockA{\textit{Dept. of Information System} \\
+    \textit{Hanyang University}\\
+    Seoul, Korea \\
+    semxe123@gmail.com}
+}
+
+\maketitle
+
+% --- Abstract & Keywords ---
+\begin{abstract}
+‘PocketHome’ is an AI-based automated control system that creates an optimal environment for multiple people at once. It works by combining user preferences, observed behaviors, and real-time environmental data from sensors in the space. Using this information, the system automatically adjusts shared appliances like heating/cooling systems, air purifiers, and lighting. The AI's main task is to find a balance that keeps the largest number of people comfortable and satisfied. The system's core technology, reinforcement learning, treats any manual adjustments by users as feedback, allowing it to continuously improve how it operates. This learning process reduces the need for people to make changes themselves.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Reinforcement Learning, Optimal Environment, Multi User, User Satisfaction
+\end{IEEEkeywords}
+
+
+\section{Role Assignments}
+
+\begin{table}[H]
+\caption{Role Assignments}
+\label{tab:roles}
+\centering
+\begin{tabularx}{\columnwidth}{l l X}
+\toprule
+\textbf{Role} & \textbf{Name} & \textbf{Task Description} \\
+\midrule
+User & Siwoong Lee & The primary end-user who provides their unique User ID and personal environmental preferences (temperature, humidity, illumination) via the mobile app. Their preference data and any manual overrides are the core inputs for the AI model. \\
+\addlinespace
+Customer & Siwoong Lee & The sponsoring entity (e.g., building owner, facility operator) who funds the project. Defines the key objectives (occupant satisfaction, energy efficiency) and approves the project scope and its integration with the building's infrastructure. \\
+\addlinespace
+Software Developer & Jaebeom Park & The technical expert responsible for building the complete 'PocketHome' system as defined in the requirements, including the mobile app (iOS/Android), central database, synchronization APIs, and local presence-detection protocols. \\
+\addlinespace
+Development Manager & Yuanjae Jang & The project lead responsible for managing the development plan, team, and risks. They ensure the 'Data Utilization (AI Core)', including MOP and RL models, is successfully implemented to meet the Customer's objective of balancing multi-user comfort. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+\section{Introduction}
+
+\subsection{Motivation}
+At home, we effortlessly control temperature, humidity, and lighting via smartphones. Yet, we lose this personalized control in shared spaces like offices and libraries. This raises a key question: ``Why can we manage our home environment meticulously, but not the public spaces where we spend most of our time?" This discrepancy highlights a significant technological gap in which individual comfort is sacrificed for one-size-fits-all management.
+
+This environmental mismatch becomes a personal burden. Individuals in shared spaces often resort to passive measures, such as adding clothing or changing seats, when uncomfortable. This directly impacts not only their comfort but also their focus and productivity. We must therefore move beyond the current, unresponsive centralized control model to a new paradigm that can intelligently accommodate diverse and individual needs.
+
+\subsection{Problem Statement}
+The fundamental flaw in shared environmental control is the requirement of enforcing a single setting on multiple individuals. This one-size-fits-all system cannot resolve the conflicting preferences that inevitably arise. Current feedback mechanisms, such as manual complaints, are inefficient, slow, and do not mediate these diverse needs. This leads directly to decreased comfort, reduced productivity, and energy waste. The core problem is the absence of an automated mechanism to intelligently mediate these conflicting demands and derive a balanced, optimal environment in real time.
+
+\subsection{Related Service}
+
+    \textbf{Siemens Comfy:} A leading workplace experience platform. It enables employees to adjust temperature and lighting in their immediate vicinity through an app. It also includes features like booking meeting rooms or desks. Its acquisition by Siemens highlights the trend of merging with smart building technology.
+
+\vspace{\baselineskip}
+
+    \textbf{HqO:} An integrated app platform that building owners provide to their tenants. It extends beyond simple environmental control to improve the overall 'work-life experience,' including booking building amenities, visitor registration, and viewing local information and announcements.
+
+\vspace{\baselineskip}
+
+    \textbf{Honeywell Forge:} An enterprise-level solution from Honeywell for optimizing building operations. Integrates data from various systems (HVAC, security, fire safety) for AI analysis to enable prediction of energy consumption and predictive maintenance. Its focus is more on operational efficiency than on employee-facing convenience.
+
+\vspace{\baselineskip}
+
+    \textbf{LG Electronics B2B Integrated Solutions:} LG provides B2B smart office solutions focused on central air conditioning (HVAC), digital signage, and meeting technologies. The key distinction is that these solutions have not yet integrated LG's consumer home appliances to provide personalized convenience for individual employees.
+
+
+\section{Requirements}
+
+\subsection{User Roles}
+\begin{itemize}
+    \item \textbf{General User:} Any individual present in a space where 'PocketHome' is installed. They register their unique ID via the app and transmit their personal environmental preferences to the system in real-time.
+\end{itemize}
+
+\subsection{Account Management}
+\begin{itemize}
+    \item \textbf{User Identification:}
+User enters their unique \texttt{User ID} once, and can delete their profile with \texttt{User ID}.
+After registration, the app stores the \texttt{User ID} on the device, allowing the user to transmit preferences without logging in each time.
+\end{itemize}
+
+\subsection{Core Features (Single Screen Interface)}
+\begin{itemize}
+    \item \textbf{Single Screen UI:} All core functions (ID verification, preference input) are provided on a single main screen. It displays \texttt{User ID}, \texttt{Temperature}, \texttt{Humidity}, \texttt{Illumination (Brightness)} those can be manually changed, and other preferences such as \texttt{Optional Biometric Data Consent} button and so on.
+\end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=1\linewidth]{MainScreen.png}
+    \caption{Main Screen}
+    \label{fig:placeholder}
+\end{figure}
+
+\subsection{Optional Data Integration}
+\subsubsection{Biometric Data}
+\begin{itemize}
+    \item \textbf{Heart Rate Sensor:} With user consent, integrates with the smartphone's heart rate sensor (on compatible devices).
+    \item \textbf{Stress Index:} With user consent, integrates with the smartphone's stress index sensor (on compatible devices).
+    \item \textbf{Real-time Transmission:} When activated, periodically transmits the average value of each heart rate and blood oxygen every 5 minutes.
+\end{itemize}
+
+\subsubsection{Personal Profile Attributes}
+\begin{itemize}
+    \item \textbf{Optional Input:} Allows users to voluntarily provide additional personal attributes, such as MBTI type, self-assessed sensitivity to cold/light, or general work patterns (e.g., ``Focus work", ``Collaborative work").
+    \item \textbf{Data Utilization:} This supplementary, non-biometric data can be used by the AI model as another feature to find correlations and improve the accuracy of its satisfaction predictions (e.g., ``Users with MBTI type `INXX' may correlate with a preference for lower illumination").
+\end{itemize}
+
+\subsection{System \& Space Integration}
+\subsubsection{Presence Detection}
+\begin{itemize}
+    \item \textbf{Network Communication:} When a user enters a specific `PocketHome' enabled zone, their smartphone begins communication with the local control device(Bluetooth Advertisement).
+\end{itemize}
+
+\subsubsection{Preference Transmission}
+\begin{itemize}
+    \item \textbf{Interval-based Communication:} While in space, the smartphone transmits its \texttt{User ID} and current preference data to the local space system at regular intervals (e.g., every 5 minutes). This allows the space system to identify in real-time which users (User IDs) with which preferences are currently present in this space.
+\end{itemize}
+
+\subsection{Data Utilization (AI Core)}
+\subsubsection{Central AI Model (Multi-Objective Optimization)}
+\begin{itemize}
+    \item \textbf{Data Aggregation:} The central AI system queries the database to retrieve two key data sets: (1) All users' registered preferences (from Data Synchronization) and (2) The list of \texttt{User ID}s currently present in a specific zone (from Preference Transmission).
+    \item \textbf{Optimization Goal:} The AI model (e.g., using Genetic Algorithms or MORL) processes this aggregated data. Its goal is to compute the single optimal environmental setting (temp, humidity, illumination) that best satisfies a defined objective function (e.g., the `Max-Min' principle, maximizing the satisfaction of the least-satisfied user).
+    \item \textbf{Control Command:} The resulting optimal setting is then sent as a command to the building's control system (e.g., HVAC, lighting controllers) for that specific zone.
+\end{itemize}
+
+\subsubsection{Reinforcement Learning Feedback Loop}
+\begin{itemize}
+    \item \textbf{Monitoring for Manual Overrides:} The system must log any manual adjustments made by users (e.g., via a physical thermostat or an admin override) after the AI has set an environment.
+    \item \textbf{Model Refinement:} A manual override is treated as strong negative feedback (``penalty"). The AI's reinforcement learning component uses this feedback to retrain its models, refining its understanding of true user preferences and discomfort thresholds to avoid this outcome in the future.
+\end{itemize}
+
+\subsection{Technical Requirements}
+\begin{itemize}
+    \item \textbf{Platform:} Mobile application (Android, iOS).
+    \item \textbf{Database:} A central, real-time database capable of receiving and updating all user \texttt{User IDs} and their changing preference data.
+    \item \textbf{Network:}
+        \begin{itemize}
+            \item \textit{Central:} Stable internet connection (Wi-Fi or Cellular) for database updates.
+            \item \textit{Local:} Local communication protocol (Bluetooth Advertisement) for the detection and transmission of user presence within a space.
+        \end{itemize}
+    \item \textbf{Privacy \& Consent:}
+        \begin{itemize}
+            \item \textit{Initial Consent:} A clear notification and consent process is mandatory upon \texttt{User ID} registration regarding the collection of preference and optional data.
+        \end{itemize}
+\end{itemize}
+
+\vspace{\baselineskip}
+
+\section{Development Environment}
+
+\subsection{Software Development Platform}
+\begin{itemize}
+    \item \textbf{Windows}\par
+\quad Windows 11 was selected as the primary developer operating system due to its robust and high-performance support for the project's essential toolchain. Its main role is to host Android Studio, enabling the stable compilation, debugging, and emulation of the native Kotlin application. This environment allows for efficient build management via Gradle and simultaneously supports the local development and testing of the Python-based AI Core services before their eventual deployment to the Firebase cloud.
+\end{itemize}
+
+\subsection{Programming Language}
+\begin{itemize}
+    \item \textbf{Dart}\par
+\quad Dart was chosen as the primary language, utilized through the Flutter framework, because it is Google's modern toolkit for building natively compiled applications for mobile, web, and desktop from a single code base. This approach significantly accelerates development and ensures a consistent user experience across platforms. The Dart language itself promotes safer and more concise code through features like robust null safety.
+ \\[0.5em]
+    \item \textbf{Python}\par
+\quad Python was chosen to power server-side Data Utilization (AI Core) because it is the definitive industry standard for the complex AI modeling this project requires. Its primary role is to execute the Multi-Objective Optimization (MOP) and Reinforcement Learning (RL) models that form the system's intelligence. This decision leverages Python's unparalleled ecosystem of mature libraries, such as Pymoo for optimization and TensorFlow Agents for reinforcement learning, which are essential for processing aggregated user data. This stack enables a flexible architecture where heavy model training (using feedback logs) is performed offline, while the resulting optimized models are deployed to a serverless environment (like Google Cloud Run) for efficient real-time inference.
+\end{itemize}
+\subsection{Software in Use}
+\begin{itemize}
+    \item \textbf{Visual Studio Code}\par
+\quad Visual Studio Code was selected as the development environment due to its unparalleled integration with the Dart language and Flutter framework, providing a lightweight, fast, and highly-optimized workflow. Its best-in-class support for stateful Hot Reload is critical, as it dramatically accelerates the development and debugging cycle. This choice is central to our cross-platform strategy, offering robust tooling to efficiently build, test, and manage the Platform Channels required for deep native integration, thereby ensuring reliable access to core hardware-centric features like the Bluetooth LE (BLE) API for Presence Detection and the Health Connect API for Biometric Data Transmission from a single, unified codebase.\\[0.5em]
+    \item \textbf{Flutter}\par
+\quad Flutter was chosen for its ability to deliver a high-fidelity, consistent UI across both Android and iOS from a single codebase. Its rich, declarative widget system allows for deep customization and rapid prototyping. This speed is accelerated by Hot Reload, enabling instant testing and refinement of the Preference Input Dashboard. This method ensures a polished user experience and avoids duplicating design efforts for each platform.\\[0.5em]
+    \item \textbf{Firebase}\par
+\quad Firebase was selected as the backend stack due to its direct alignment with the project's core requirements and its seamless integration with the native Kotlin app. Its Cloud Firestore component provides the essential real-time database capability specified in the Data Synchronization requirement, allowing for instantaneous preference updates from the app with minimal latency. Furthermore, Firebase's serverless architecture, through Cloud Functions, is ideal for executing the Data Utilization (AI Core) logic, enabling scalable, event-driven inference for our MOP/RL models. This comprehensive platform, combined with the cost-free prototyping offered by the Spark Plan and a robust Kotlin SDK, makes it the most rapid and efficient solution for development.\\[0.5em]
+    \item \textbf{Google Cloud Compute Engine}\par
+\quad Google Cloud Compute Engine was selected to provide the high-performance computing infrastructure necessary for the intensive computational loads of the MOP/RL models. Unlike serverless environments, it offers full control over virtual machine configurations, enabling the specific GPU acceleration and custom runtime environments required for deep learning tasks. This choice ensures the stable and scalable execution of the AI Core while maintaining low-latency connectivity with the Firebase database, guaranteeing real-time responsiveness for complex inference operations.\\
+\item     \textbf{FastAPI}\par
+\quad FastAPI was adopted to establish a high-performance model serving layer within Google Cloud Compute Engine, enabling direct deployment of MOP/RL inference capabilities to client terminals. Its native support for asynchronous I/O is critical for efficiently managing concurrent requests without blocking the computational resources required by the underlying Python-based models. This framework provides a lightweight, standardized REST interface that bridges the AI Core with the external network, ensuring low-latency data transmission and reliable API contracts for the end-user devices.
+
+ 
+
+    
+\end{itemize}
+
+\subsection{Cost Estimation}
+\begin{itemize}
+    \item \textbf{Software Costs: \$0.} All primary development tools are free (Flutter, Git, VS Code).
+    \item \textbf{Cloud Costs (Prototype): \$100.} We will utilize the \textbf{Firebase (GCP) Free Tier (Spark Plan)} and \textbf{Google Cloud Compute Engine}. This plan provides sufficient capacity for the \texttt{Cloud Firestore} database (real-time data sync) and \texttt{Virtual Machine} (API/AI logic) needed for development and initial testing.
+    \item \textbf{Hardware Costs: \$0.} Development will use existing laptops (PC/Mac) and Android test devices.
+\end{itemize}
+
+\subsection{Development Environment Details}
+\begin{itemize}
+    \item \textbf{Workstation OS:} Windows 11 (Host for Android Emulator \& Development)
+    \item \textbf{IDE:} Visual Studio Code
+    \item \textbf{Framework \& Language:} Flutter (Dart SDK 3.x), Python 3.10+
+    \item \textbf{Version Control:} Git (Repository: \texttt{LeeSiwoong/PocketHome})
+    \item \textbf{Target Platform:} Android (Min SDK 26, Target SDK 34/35), iOS (Latest)
+    \item \textbf{Backend \& AI Infrastructure:}
+        \begin{itemize}
+             \item \textbf{BaaS:} Firebase (Firestore, Auth, Functions)
+             \item \textbf{Compute:} Google Cloud Compute Engine (GPU-accelerated instances for AI models, Ubuntu)
+        \end{itemize}
+    \item \textbf{Key Libraries \& Dependencies:}
+        \begin{itemize}
+            \item \textbf{Flutter Client (Dart):}
+            \begin{itemize}
+                \item \texttt{firebase\_core} / \texttt{cloud\_firestore}: For app initialization and real-time NoSQL database sync.
+                \item \texttt{flutter\_blue\_plus}: For Bluetooth Low Energy (BLE) scanning and 'Presence Detection'.
+                \item \texttt{http}: For asynchronous REST API requests to the Python AI Core.
+                \item \texttt{permission\_handler}: For managing runtime permissions (BLE, Health, Location).
+            \end{itemize}
+            \item \textbf{AI Core (Python/FastAPI):}
+            \begin{itemize}
+                \item \texttt{FastAPI} / \texttt{Uvicorn}: For high-concurrency ASGI server implementation.
+                \item \texttt{sklearn}: For random forest regressor.
+                \item  \texttt{NumPy}: For data preprocessing and manipulation.
+            \end{itemize}
+        \end{itemize}
+\end{itemize}
+
+\subsection{Software in Use (Existing Algorithms)}
+We leverage established, high-performance libraries to ensure system reliability and scalability. The client application is built using the \textbf{Flutter SDK}, utilizing \texttt{\textbf{flutter\_blue\_plus}} for BLE-based presence detection and \texttt{\textbf{firebase\_core}} for real-time data synchronization. For the Python AI Core, we utilize \textbf{scikit-learn} to implement the Random Forest Regressor for user preference prediction and \textbf{NumPy} to execute a custom Genetic Algorithm for multi-user environmental optimization. These models are exposed via \textbf{FastAPI} and hosted on \textbf{Google Cloud Compute Engine} to handle real-time inference requests efficiently. 
+\vspace{\baselineskip}
+
+\subsection{Task Distribution}
+\begin{table}[H]
+\caption{Role Assignments}
+\label{tab:roles}
+\centering
+\begin{tabularx}{\columnwidth}{l l X}
+\toprule
+\textbf{Role} & \textbf{Name} & \textbf{Task Description} \\
+\midrule
+Frontend Developer & Siwoong Lee & The Frontend Developer constructs the cross-platform mobile application using Flutter and Dart, implementing the user interface for ID management and environmental controls while handling local Bluetooth Low Energy (BLE) scanning for presence detection. \\
+\addlinespace
+Backend Developer & Jang Yuanjae & The Backend Developer manages the server-side infrastructure using Firebase and Google Cloud Compute Engine to ensure real-time data synchronization between the app and the central database.\\
+\addlinespace
+AI Developer & Park Jaebeom & The AI Developer engineers the system's core intelligence using Python, deploying Multi-Objective Optimization and Reinforcement Learning models to aggregate user data and calculate optimal environmental settings. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\vspace{\baselineskip}
+
+\section{Specifications}
+\textit{Technology Stack: Kotlin (Android App), Firebase (Backend/DB), Python (AI Core)}
+\subsection{User Roles}
+\begin{itemize}
+    \item \textbf{User Identification:} When the app is opened for the first time, the user must enter a unique  \texttt{User ID}. It must not be in the database. If the user wants to delete or change \texttt{User ID}, it can be done by clicking the ID in ID section in main screen. The app must not run if there is no valid ID on user's app.
+\end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=1\linewidth]{IDInput.png}
+    \caption{ID Initialization}
+    \label{fig:placeholder}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{IDSection.png}
+    \caption{ID Section}
+    \label{fig:placeholder}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{IDDelete.png}
+    \caption{ID Deletion Pop-up}
+    \label{fig:placeholder}
+\end{figure}
+
+\subsection{Core Features}
+\begin{itemize}
+
+    \item     \textbf{Send Modified Data:} Automatically send modified data when the user changes any of them.
+
+\end{itemize}
+
+\subsection{Environmental Preference Controls}
+\begin{itemize}
+    \item \textbf{Temperature:}
+        \begin{itemize}
+            \item \textit{Control:} Stepper control.
+            \item \textit{Range:} 18.0°C \textasciitilde{} 28.0°C.
+            \item \textit{Increment:} Adjustable in units of 0.5°C by clicking buttons.
+        \end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Temp.png}
+    \caption{Temperature Controller}
+    \label{fig:placeholder}
+\end{figure}
+    \item \textbf{Humidity:}
+        \begin{itemize}
+            \item \textit{Control:} 5-step segmented button group.
+            \item \textit{Steps:} 5 levels (e.g., ``Very Dry", ``Dry", ``Neutral", ``Humid", ``Very Humid").
+        \end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Hum.png}
+    \caption{Humidity Controller}
+    \label{fig:placeholder}
+\end{figure}
+    \item \textbf{Illumination (Brightness):}
+        \begin{itemize}
+            \item \textit{Control:} Continuous slider.
+            \item \textit{Range:} 0\% (Darkest) \textasciitilde{} 100\% (Brightest) in units of 10%.
+\end{itemize}
+\end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Bright.png}
+    \caption{Illumination Controller}
+    \label{fig:placeholder}
+\end{figure}
+
+\vspace{\baselineskip}
+
+\subsection{Optional Data Integration}
+\begin{itemize}
+    \item \textbf{Optional Biometric Data Consent:} A heart shaped icon in the top-left corner opens a pop-up window where users can consent to the collection of optional biometric data. Pop-up window can be closed by clicking outside of it.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{Health.png}
+    \caption{Biometric Data Consent Pop-up}
+    \label{fig:placeholder}
+\end{figure}
+    \item \textbf{Optional Profile Access:} A \texttt{+} (plus) button in the top-right corner. Tapping this button opens an overlay screen (modal) where users can input or delete their optional `Personal Profile Attributes' (e.g., MBTI, sensitivity to cold). Overlay screen can be closed by clicking outside of it.
+\end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=1\linewidth]{MBTI.png}
+    \caption{MBTI Enter Overlay}
+    \label{fig:placeholder}
+\end{figure}
+
+\subsection{System \& Space Integration}
+
+\subsubsection{Presence Detection \& Preference Transmission}
+\paragraph{Platform:} Flutter (Dart - Background Isolate/Service)
+\paragraph{Description:} Detects current zone via BLE scan using platform channels and periodically updates user's presence/preferences to the \texttt{presence\_logs} collection.
+
+\begin{lstlisting}
+FUNCTION startService() async:
+    // 1. Start BLE scan for 'PocketHome_BEACON_UUID'
+    // Using a stream listener for continuous scanning
+    FlutterBluePlus.startScan(
+        withServices: ["PocketHome_BEACON_UUID"]
+    );
+    
+    FlutterBluePlus.scanResults.listen((results) {
+        onScanResult(results);
+    });
+    
+    // 2. Schedule periodic timer (e.g., 1 min)
+    Timer.periodic(Duration(minutes: 1), (timer) {
+        transmitPresence();
+    });
+END FUNCTION
+
+// 3. BLE Scan Callback (Stream Listener)
+FUNCTION onScanResult(List<ScanResult> results):
+    // logic to find the closest beacon
+    if (results.isNotEmpty) {
+        currentZone = results.first.device.name; // e.g., "Zone_A"
+    }
+END FUNCTION
+
+// 4. Function that runs every 1 minute
+FUNCTION transmitPresence() async:
+    final userID = await loadUserIDLocally();
+    
+    IF currentZone == null: // User is not in a zone
+        // (Optional: log out event)
+        FirebaseFirestore.instance
+            .collection("presence_logs")
+            .doc(userID).delete();
+        RETURN;
+    
+    // 5. Update my info in the current zone's log
+    // Accessing app state or local storage for prefs
+    final currentPrefs = appState.currentUserPreferences;
+    
+    final Map<String, dynamic> presenceData = {
+        "zone": currentZone,
+        "preferences": currentPrefs,
+        "lastSeen": Timestamp.now()
+    };
+
+    // Overwrite(set) doc with {userID} as the ID
+    await FirebaseFirestore.instance
+        .collection("presence_logs")
+        .doc(userID).set(presenceData);
+END FUNCTION
+\end{lstlisting}
+
+\subsection{Data Utilization (AI Core)}
+\textit{Note: This section is Python code running on the Google Cloud backend, processing data uploaded by the Flutter app.} \\
+
+\subsubsection{Central AI Model (MOP Inference)}
+\paragraph{Platform:} Python (Google Cloud Run / Cloud Function)
+\paragraph{Description:} Triggered every 5 minutes. Aggregates preferences of users in a zone, 'infers' the optimal setting using a pre-trained model, and sends the command to the HVAC system. \\
+
+% Using 'verbatim' for Python as '#' causes conflicts
+% We wrap in {\small} to control font size
+{\small
+\begin{lstlisting}
+FUNCTION calculate_optimal_environment(event, context):
+def calculate_optimal_environment(zoneID="Zone_A"): # 0. Load the MOP model trained locally model = load_model("mop_model.pkl")
+
+# 1. Aggregate preferences of users in 'Zone_A'
+db = firestore.client()
+users_in_zone = db.collection("presence_logs") \
+                  .where("zone", "==", zoneID).get()
+
+user_preferences = [] 
+for doc in users_in_zone:
+    user_preferences.append(
+        doc.to_dict().get("preferences"))
+
+IF len(user_preferences) == 0:
+    RETURN # No one is in the zone
+    
+# 2. 'Infer' the optimal solution
+optimal_setting = model.predict(user_preferences) 
+# e.g., {"temp": 23.5, "humidity": 3}
+
+# 3. Send command to the building API
+HVAC_API.set_temperature(
+    zoneID, optimal_setting["temp"]
+)
+LIGHTING_API.set_brightness(
+    zoneID, optimal_setting["illumination"]
+)
+
+# 4. (For feedback loop) Record AI's setting in DB
+db.collection("zone_status").document(zoneID).update({
+    "ai_setting": optimal_setting,
+    "timestamp": NOW()})
+    
+END FUNCTION \end{lstlisting} }
+
+
+\section{Architecture Design \& Implementation}
+
+\subsection{Overall Architecture}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{pktmDiagram.png}    \caption{PocketHome Architecture Diagram}
+    \label{fig:placeholder}
+\end{figure}
+\quad PocketHome system has 3 main modules: Frontend, ML Backend and Place. Frontend is for normal users, ML Backend is for database and virtual machine that makes model in cloud environment, and Place is for certain places like cafe, classroom, or subway.\par\vspace{\baselineskip}
+\quad Frontend contains smart phone and wearable devices such as smart watches. wearable devices send user's health information in case of when user agreed to utilize theirs. The smart phone sends user's data to two directions: database and control device by Flutter. It sends user preferences like which environment the user prefers and user's health information(optional) to database, and signal of user presence to control device using Bluetooth advertising so that control device can get those users' information from database.\par\vspace{\baselineskip}
+\quad In ML Backend, there are database and virtual machine. Database saves entire users' information, and sends all data to virtual machine in regular period. When virtual machine receives the data set from Firebase database, it makes the optimal AI model which can create single best optimized environment. Virtual machine is constructed on Ubuntu of Google Cloud, and AI model is made by scikit learn of Python.\par\vspace{\baselineskip}
+\quad Place module contains control device and appliances. They varies on different places, so basically there are no same places for this system. Once control device get user presence signal, it calls that user's information from database. This control device calculates the single best optimized environment by using AI model. The local AI model is regularly updated through FastAPI every period. After calculation, control device automatically modifies setting values of each appliance.\par
+\vspace{\baselineskip}
+\vspace{\baselineskip}
+
+\subsection{Directory Organization}
+\subsubsection{Backend AI Model}
+\subsubsection{App}
+\begin{table}[H]
+    \centering
+    \def\arraystretch{1.24} \small
+    \begin{tabular}{|p{3.7cm}|p{4.1cm}|}\hline
+         Directory& File Names\\\hline
+         /Backend AI Model&  model.py \par endhost.py\\\hline
+    \end{tabular}
+\end{table}
+\subsubsection{Document}
+\begin{table}[H]
+    \centering
+    \def\arraystretch{1.24} \small
+     
+
+
+      \begin{tabular}{|p{3.7cm}|p{4.1cm}|}\hline
+ Directory& File Names\\\hline
+ /App/.github&  copilot-instructions.md\\\hline
+ /App/.vscode& settings.json\\\hline
+ /App/android& build.gradle.kts \par gradle.properties \par gradlew \par gradlew.bat \par local.properties \par settings.gradle.kts\\\hline
+ /App/docs& FIREBASE\_SETUP.md\\\hline
+ /App/ios/Runner& AppDelegate.swift\\\hline
+ /App/lib/models& user\_settings.dart\\\hline
+ /App/lib/screens&main\_screen.dart \par splash\_screen.dart \par user\_id\_input\_screen.dart\\\hline
+ /App/lib/services&bluetooth\_id\_broadcaster.dart \par body\_metrics\_service.dart\\\hline
+ /App/lib/widgets&\_outlined\_text.dart \par app\_name\_header.dart \par brightness\_control.dart \par delete\_conformation\_dialog.dart \par humidity\_control.dart \par info\_dialog.dart \par mbti\_input\_panel.dart \par temperature\_control.dart\\\hline
+ /App/lib&firebase\_database\_config.dart \par main.dart\\\hline
+ /App& .metadata \par analysis\_options.yaml \par devtools\_options.yaml \par pubspec.lock \par pubspec.yaml\\ \hline
+    \end{tabular}
+    
+\end{table}
+
+\subsubsection{Place End Host}
+
+\begin{table}[H]
+    \centering
+    \def\arraystretch{1.24} \small
+
+
+        \begin{tabular}{|p{3.7cm}|p{4.1cm}|}\hline
+         Directory& File Names\\\hline
+         /Document&  PocketHome.pdf \par PocketHome.tex\\\hline
+    \end{tabular}
+    
+    
+\end{table}
+
+\subsubsection{Others}
+
+\begin{table}[H]
+    \centering
+    \def\arraystretch{1.24} \small
+
+
+        \begin{tabular}{|p{3.7cm}|p{4.1cm}|}\hline
+         Directory& File Names\\\hline
+         /Place End Host&  PocketHome.pdf \par PocketHome.tex\\\hline
+    \end{tabular}
+    
+    
+\end{table}
+\begin{itemize}
+    \item \textbf{PocketHomeDiagram.png:} This png file shows the architecture of PocketHome system.
+    \item \textbf{README.md:} This README file shows how AI-driven optimization model is constructed.
+\end{itemize}
+
+
+\subsection{Module Description}
+
+\subsubsection{Frontend}
+\begin{itemize}
+    \item \textbf{Purpose}\par\quad The Frontend Module of PocketHome helps individual users to modify their own preferences. It is delivered as an application form, and users can interact with it by clicking some button on the screen. When each parameter is changed, the application sends that data to database on cloud simultaneously.\\
+    \item \textbf{Functionality}\par\quad It provides user ID initialization, user ID deletion and user-based preferences. User-based preferences consists many parameters such as preferred temperature, preferred humidity, preferred brightness, user's MBTI(optional) and user's real time health information. When user changes any value of them, it also sends its timestamp of that time.\\
+    \item \textbf{Location of Source Code}\par \quad \url{https://github.com/LeeSiwoong/PocketHome/tree/main/App}\\
+    \item \textbf{Class Component} \begin{itemize}
+    \item build.gradle.kts: It defines build configuration of project.
+    \item gradle.properties: It controls the performance settings of the Gradle build system.
+    \item settings.gradle.kts: It makes Flutter project can build Android version.
+    \item AppDelegate.swift: It is the entry point for the iOS version application.
+    \item GeneratedPluginRegistrant.h: It is the Objective-C Header file for the plugin registration system.
+    \item GeneratedPluginRegistrant.m: It is the plugin manifest of iOS application.
+    \item user\_settings.dart: It sends user preferences to database and makes application to remember them.
+    \item main\_screen.dart: It shows users main screen, which enables users can modify their preferences.
+    \item splash\_screen.dart: It is shown for 2 seconds when user starts the application.
+    \item user\_id\_input\_screen.dart: It is shown when user initially runs the application or after the user deletes ID.
+    \item bluetooth\_id\_broadcaster.dart: It enables the smart phone can send signal of user presence by broadcasting Bluetooth advertisement.
+    \item body\_metrics\_service.dart: It enables users to give permission to system to utilize their real time health information.
+    \item app\_name\_header.dart: It shows buttons for pop-up menus and user ID.
+    \item brightness\_control.dart: It provides user a brightness controller.
+    \item delete\_confirmation\_dialog.dart: It shows a pop-up screen of user ID deletion when user clicks the user ID.
+    \item humidity\_control.dart: It provides user a humidity controller.
+    \item info\_dialog.dart: It enables user to permit for their real time health information utilization.
+    \item mbti\_input\_panel.dart: It provides user MBTI entering side bar.
+    \item temperature\_control.dart: It provides user a temperature controller.
+    \item firebase\_database\_config.dart: It gives app the information of database that should be connected.
+    \item main.dart: It controls the main flow of the PocketHome application.
+        \end{itemize}
+\end{itemize}
+
+
+\subsubsection{Backend}
+\begin{itemize}
+    \item \textbf{Purpose}\par\quad The Backend Module of PocketHome stores users' preferences to database on cloud. Database is managed on cloud environment, and virtual machine brings that database to make the best AI Model. After building an AI model, it spreads the model to end hosts of places. Also it gives end hosts the user's information based on user presence from places.\\
+    \item \textbf{Functionality}\par\quad It stores user's preferences in form of NoSQL on Firebase. Firebase provides database to virtual machine on Google Cloud. Virtual machine works on Ubuntu, and it periodically get database to build a best model for mediation of user preferences. Model is trained by scikit learn of Python. After building a model, the model is delivered to end host of each place by FastAPI.\\
+    \item \textbf{Location of Source Code}\par \quad \url{https://github.com/LeeSiwoong/PocketHome/tree/main/Backend\%20AI\%20Model} \\
+    \item \textbf{Class Component} \begin{itemize}
+    \item build.gradle.kts: It defines build configuration of project.
+    \item gradle.properties: It controls the performance settings of the Gradle build system.
+
+        \end{itemize}
+\end{itemize}
+
+
+\subsubsection{Place}
+\begin{itemize}
+    \item \textbf{Purpose}\par\quad The Place Module of PocketHome is for actual performance for each place. Every end host for every place works separately, but the main logic is same due to the model downloaded from the main single server. It collects the user presence and call their information from database.\\
+    \item \textbf{Functionality}\par\quad It defines if particular user is in that place by using Bluetooth advertisement every 5 minutes, and get their user preferences from database. Device that performs this mechanism is called control device, and it must be connected to network to get the information from cloud. Also, it computes the best single optimized environment by running model, which is downloaded from virtual machine.\\
+    \item \textbf{Location of Source Code}\par \quad \url{https://github.com/LeeSiwoong/PocketHome/tree/main/Place\%20End\%20Host} \\
+    \item \textbf{Class Component} \begin{itemize}
+    \item build.gradle.kts: It defines build configuration of project.
+    \item gradle.properties: It controls the performance settings of the Gradle build system.
+
+        \end{itemize}
+\end{itemize}
+
+
+\section{Use Case}
+
+\subsection{Loading}
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=1\linewidth]{Splash.png}
+    \caption{Splash Screen}
+    \label{fig:placeholder}
+\end{figure}
+\quad When the application is launched, a splash screen is shown for 2 seconds. This screen helps to wait the application to be fully loaded. Also, the application asks users to enable Bluetooth usage function to interact with place.
+
+\subsection{ID Initialization \& User Agreement}
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=1\linewidth]{IDInput.png}
+    \caption{ID Initialization Screen}
+    \label{fig:placeholder}
+\end{figure}
+\quad This screen is shown only when user launched the application for the first time, or when the user deleted the ID which triggers the deletion of user information. User enters the own unique ID. If there exists the same ID in database, user cannot continue to the main page. If the user clicks the button of user agreement, a text box appears that shows the requirements for the users to use this application. After entering the main screen, this screen does not appear until the ID is deleted.
+
+\subsection{Main Screen}
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=1\linewidth]{MainScreen.png}
+    \caption{Main Screen}
+    \label{fig:placeholder}
+\end{figure}
+\quad This screen shows the parameters that user can control. When the user changes one of them, the modified data is sent to the database so that the place can utilize that user's preferences information. By clicking heart-shaped icon and plus-shaped icon, user can agree to send their health information and MBTI information for each.
+
+\subsection{User ID Deletion}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{IDSection.png}
+    \caption{ID Section}
+    \label{fig:placeholder}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\linewidth]{IDDelete.png}
+    \caption{ID Deletion Pop-up}
+    \label{fig:placeholder}
+\end{figure}
+\quad This screen is for user ID deletion. If users do not want to use this application anymore, users can delete their information by clicking the user ID in ID section. When the user clicks the user ID, an ID Deletion Pop-up is shown, and ther user can delete their information from database and application by clicking delete button.
+
+
+\section{Discussion}
+\quad This project was the first experience to make an application for all teammates. It was difficult to decide how to separate frontend and backend, and somehow we made it. However, there were still some complicated parts, so we tried to find easy answers on the Internet. In addition, constructing a cloud environment for machine learning was hard to achieve because the configuration was completely different from what we have done. Communication issues were also an issue of making this system in terms of understanding, simple miscommunications, and time to mail to each other.\par
+\quad Especially the making of an ML model for the best single environment and the connection of the application to the database were the two major problems of this project. The goal of this project is to find the best single environment for many people, and it is an unusual situation compared to other common situations. Therefore, how to make an algorithm for this multi-value data set was a most important quest.\par
+\quad Connecting the application and the database was done in Flutter to simplify the code. That was simple, but managing Firebase database was another problem. This was our first time using the NoSQL database, so we searched various documents to get used to it.\par
+\quad At the end of this project, we thought that learning new languages is important to have a wide spectrum of programming, and we will try to experience as much as we can.
+
+
+\end{document}
