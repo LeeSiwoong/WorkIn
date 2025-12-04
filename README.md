@@ -247,298 +247,358 @@ This enables PocketHome to continuously reflect both behavioral and physiologica
 
 ---
 
-### **Summary**
-The Firestore dataset powers the entire AI pipeline by providing:
-- Environmental preferences
-
-- Personality traits
-
-- Time-based metadata
-
-- Biometric signals
-
-The Weight Model Server learns weights, and End-Host devices compute the real-time shared environment using these learned weights.
-
 # III. Methodology
 
-The PocketHome system follows a three-phase pipeline:  
-**(1) Initial Setup and Modeling → (2) Multi-Objective Optimization → (3) Continuous Learning Loop.**  
-This ensures that the environment is optimized for multiple users at once and continuously adapts to feedback, time-based tolerance, and biometric signals.
+PocketHome uses a two-part AI–IoT architecture consisting of a centralized **Weight Model Server** and distributed **End-Host controllers**.  
+The server performs all machine learning, while end-host devices compute final environment values using lightweight algorithms.  
+This section describes the complete process—from data ingestion to environment computation and adaptation.
 
 ---
 
-## **1. Phase 1: Initial Setup & User Modeling**
+## **1. System Architecture Overview**
 
-### **(1) Collecting User Preferences**
-Users enter their preferred temperature, humidity, and brightness levels through the WorkIn app.  
-These values, along with MBTI personality types and optional biometric settings, are stored in Firebase Realtime Database.
+The PocketHome system operates as a continuous loop:
 
-Example user entry:
+**Firestore → Weight Model Server → Weight Model JSON → End Host → Environment Update**
+
+Overall workflow:
+
+1. Users provide environmental preferences, MBTI traits, and optional biometric data.  
+2. Firestore stores all user profiles in a structured format.  
+3. The Weight Model Server collects all profiles and constructs feature vectors.  
+4. A Random Forest model is trained to estimate how strongly each user should influence the environment.  
+5. The trained model is exported as JSON and served through `/weight-model`.  
+6. End-host devices download the model, read user data, and compute the final environment using weighted aggregation.
+
+This division of labor allows PocketHome to scale to many users while keeping IoT devices efficient.
+
+---
+
+## **2. User Feature Construction**
+
+Each user document provides all necessary inputs for the machine-learning model:
+
 ```json
 {
   "userId": "U1",
-  "mbti": "ENTP",
   "temperature": 24.1,
   "humidity": 4,
   "brightness": 2,
+
+  "mbti": "ENTP",
+  "mbtiEI": "E",
+  "mbtiNS": "N",
+  "mbtiTF": "T",
+  "mbtiPJ": "P",
+
+  "updatedAt": "202512022210",
+
   "useBodyInfo": true,
-  "updatedAt": 1763184630661
+  "bodyMetrics": {
+    "collectedAt": "2025-12-02T17:29:37.573324",
+    "stressAvg": 38,
+    "heartRateVariation": 18
+  }
 }
 ```
 
-These static inputs serve as the baseline for satisfaction modeling.
+From this, the server extracts a **feature vector** combining:
+
+| Feature Type | Example Fields |
+|--------------|----------------|
+| Environmental preferences | temperature, humidity, brightness |
+| Personality indicators | mbtiEI, mbtiNS, mbtiTF, mbtiPJ |
+| Physiological signals | stressAvg, heartRateVariation |
+| Time-based freshness | minutes since updatedAt |
+
+These multidimensional features allow the model to interpret user behavior, preference stability, and biometric states.
 
 ---
 
-### **(2) Satisfaction Function Modeling (Fuzzy Logic with Dynamic Tolerance)**
+## **3. Weight Labeling Logic (Pre-Model Algorithm)**
 
-The system converts each user’s preferences into a continuous satisfaction function using Gaussian-based fuzzy logic:
+Before training the machine-learning model, PocketHome computes a **rule-based target weight** for each user.  
+This reflects that not all users should influence the environment equally.
 
-```math
-S(x) = e^{-(x - target)^2 / (2 \cdot tolerance^2)}
+Weight factors:
+
+- **Data recency**: recently updated preferences have stronger influence  
+- **Stress level**: high stress amplifies importance  
+- **Heart-rate variation**: unstable HRV suggests discomfort, increasing weight  
+- **Missing biometric information**: treated neutrally  
+- **Stale profiles**: influence gradually decays over time  
+
+This rule-based score becomes the regression label used for training.
+
+---
+
+## **4. Random Forest Weight Model (Core Algorithm)**
+
+The Weight Model Server trains a `RandomForestRegressor` to learn how user features map to weight importance.
+
+### **Why Random Forest?**
+- Handles mixed numerical and categorical features (MBTI + biometrics)  
+- Naturally models non-linear relationships  
+- Robust against noise and missing values  
+- Light enough to export as JSON for IoT inference  
+
+### **Model Output Format**
+The trained model is exported as a lightweight JSON structure:
+
+```json
+{
+  "n_nodes": 75,
+  "nodes": [...],
+  "values": [...],
+  "classes": [...]
+}
 ```
 
-However, the **tolerance value is dynamic**, influenced by:
-
-- **Time since last update (`updatedAt`)**  
-  - Longer duration → higher adaptation factor → wider tolerance  
-- **Stress level (bodyMetrics.stressAvg)**  
-  - stress > 70 → tolerance × 0.7  
-- **Heart-rate variability (bodyMetrics.heartRateVariation)**
-
-This makes temperature satisfaction context-aware and physiologically adaptive.
-
-Weights used:
-- Temperature: 50%  
-- Humidity: 30%  
-- Brightness: 20%
-
----
-
-### **(3) Biometric and Behavioral Adjustment**
-
-If `useBodyInfo = true`, the system adjusts comfort models using physiological indicators:
-
-- **stressAvg > 70**
-  - Target temperature reduced by **1.0°C**
-  - Satisfaction penalty = stress% × 0.2
-- **heartRateVariation > 20**
-  - Target temperature reduced by **0.5°C**
-
-These adjustments help detect hidden discomfort even when the user does not manually change settings.
-
----
-
-### **(4) Preference Prediction (Random Forest Regression)**
-Some users may have missing data.  
-To prevent this from breaking the pipeline, the system uses RandomForestRegressor models to predict:
-
-- Temperature  
-- Humidity  
-- Brightness  
-
-based on MBTI patterns observed in other users.
-
----
-
-## **2. Phase 2: Multi-Objective Optimization (MOP)**
-
-### **(1) Defining the Objective Function**
-The system aggregates satisfaction scores from all users and applies a **Max–Min fairness objective**:
-
-```math
-Goal = \max ( \min(S_1, S_2, ..., S_n) )
-```
-
-This ensures no user experiences extreme discomfort.
-
----
-
-### **(2) Optimization via Genetic Algorithm (GA)**  
-Search space:
-
-- Temperature (18–28°C, 0.5 step)  
-- Humidity (1–5)  
-- Brightness (0–10)
-
-Procedure:
-
-1. Generate random environment candidates  
-2. Evaluate fitness (minimum + average satisfaction)  
-3. Select best candidates  
-4. Apply crossover & mutation  
-5. Iterate over generations  
-6. Return the optimal solution
-
-**Example Output (Actual Program Result)**
+The JSON is served through:
 
 ```
-[설정] 온도:22.5°C / 습도:4 / 조도:5
-[예측] 최소:45점 / 평균:73점
+GET /weight-model
+```
+
+End-host devices repeatedly fetch this model to remain synchronized with the latest learned behavior.
+
+---
+
+## **5. End-Host Environment Aggregation Algorithm**
+
+End-host devices compute the final temperature, humidity, and brightness.  
+They follow this four-step routine:
+
+1. **Download** the weight model JSON  
+2. **Fetch** all active user profiles from Firestore  
+3. **Predict** each user's weight  
+4. **Aggregate** preferences using weighted averages  
+
+### **Weighted Aggregation Formula**
+
+```
+Final Temperature = Σ(weight_i × temperature_i) / Σ(weight_i)
+Final Humidity    = Σ(weight_i × humidity_i)    / Σ(weight_i)
+Final Brightness  = Σ(weight_i × brightness_i)  / Σ(weight_i)
+```
+
+As a result:
+
+- stressed users have stronger influence  
+- recent updates override old ones  
+- incomplete profiles are handled gracefully  
+- environmental settings adjust consistently with group dynamics  
+
+This methodology replaces older heavy optimization techniques with a direct, explainable, and real-time algorithm.
+
+---
+
+## **6. Continuous Adaptation Loop**
+
+PocketHome continuously adapts based on:
+
+- new biometric measurements  
+- user preference updates  
+- personality changes  
+- time-decay applied to stale data  
+
+Whenever any user state changes:
+
+1. The Weight Model Server retrains or updates predictions  
+2. End-host devices download the latest model  
+3. Weighted aggregation is recomputed  
+4. The environment is updated accordingly  
+
+This loop ensures the system remains sensitive to both behavioral and physiological conditions of users over time.
+
+---
+
+## **7. Code-Level Summary of Core Components**
+
+### **7.1 weight_model_server.py**
+
+Responsibilities:
+
+- Retrieve all user profiles  
+- Build feature vectors  
+- Compute rule-based weight labels  
+- Train RandomForestRegressor  
+- Export JSON model  
+- Serve `/weight-model` endpoint  
+
+Pseudo-flow:
+
+```
+users = fetch_from_firestore()
+features, labels = extract_and_label(users)
+model = RandomForestRegressor().fit(features, labels)
+export_model_as_json(model)
 ```
 
 ---
 
-## **3. Phase 3: Continuous Learning Loop**
+### **7.2 end_host.py**
 
-### **(1) Real-Time Feedback Collection**
-- No manual changes → **positive feedback**  
-- User changes environment → **negative feedback**
+Responsibilities:
 
-### **(2) Model Update**
-- Update Firebase values  
-- Recalculate tolerance based on time  
-- Apply biometric adjustments  
-- Retrain Random Forest  
-- Re-run optimization
+- Download the weight model  
+- Read updated user profiles  
+- Predict weights  
+- Compute final settings  
+- Output or apply them  
 
-### **(3) Re-Optimization**
-This loop drives the system toward a **Pareto-optimal state** where satisfaction is balanced.
+Pseudo-flow:
 
----
+```
+model = load_weight_model()
+profiles = fetch_firestore_profiles()
 
-## **4. Visualization & Analysis**
-The system visualizes:
-
-- Individual satisfaction scores  
-- Mean and minimum scores  
-- MBTI-based preference differences  
-
-This helps analyze fairness and performance.
+for user in profiles:
+    weight = model.predict(user_features)
+compute_weighted_environment()
+apply_environment()
+```
 
 ---
 
-## **Why These Algorithms?**
+## **8. Summary**
 
-- **Fuzzy Logic with dynamic tolerance**  
-  Captures human comfort more realistically and adapts to time and biometric signals.
+PocketHome’s methodology integrates four key ideas:
 
-- **Random Forest Regression**  
-  Predicts missing values robustly even with small datasets.
+1. **Behavioral modeling** through Firestore user profiles  
+2. **Algorithmic weighting** combining rule-based logic and ML prediction  
+3. **Lightweight IoT aggregation** using weighted averages  
+4. **Continuous adaptation** through real-time updates  
 
-- **Genetic Algorithm**  
-  Handles non-linear, multi-dimensional search spaces efficiently.
+This design ensures fairness, responsiveness, and interpretability across a multi-user shared environment.
 
-- **Max–Min Objective Function**  
-  Ensures fairness in multi-user environments.
-
----
-
-## **Summary**
-PocketHome integrates:
-
-- Fuzzy satisfaction curves  
-- Dynamic tolerance (time & biometric-based)  
-- Machine learning prediction  
-- Genetic optimization  
-- Reinforcement-style continuous feedback  
-
-to maintain a fair, adaptive, and intelligent indoor environment.
 
 # IV. Evaluation & Analysis
 
-This section evaluates how effectively PocketHome optimizes a shared environment for multiple users.  
-The analysis is based on (1) optimization output logs, (2) MBTI trend analysis, and  
-(3) satisfaction distribution visualizations.
+This section evaluates how effectively PocketHome optimizes a shared environment for multiple users.
+The analysis is based on (1) optimization output logs, (2) user weight behavior, and (3) retraining and adaptation performance.
 
 ---
 
 ## **1. Optimization Output Summary**
 
-When the AI runs the optimization process, the system prints the following:
+When PocketHome runs its optimization process, the end-host produces logs such as:
 
 ```
-[설정] 온도:22.5°C / 습도:4 / 조도:5
-[예측] 최소:45점 / 평균:73점
+▶ [FINAL DECISION] Temp: 23.4°C / Hum: 3 / Light: 5
+
 ```
 
 ### Interpretation
-- **Temperature = 22.5°C, Humidity = 4, Brightness = 5**  
-  → The Genetic Algorithm identified this as the fairest shared environment.
-- **Minimum satisfaction = 45점**  
-  → Even the least satisfied user maintains moderate comfort.
-- **Average satisfaction = 73점**  
-  → Most users experience high comfort.
+- **The final environment setting** is calculated using the weighted average of all active users’ preferences.
+- **Higher-weight users contribute more** to the final temperature, humidity, and brightness values.
+- The output is **stable and consistent** across multiple runs, confirming the reliability of the weighted optimization method.
 
 This confirms that the Max–Min optimization objective is functioning as intended.
 
 ---
 
-## **2. MBTI-Based Preference Analysis**
+## **2. User Weight Analysis**
 
-The system also analyzes MBTI traits and their correlation with temperature preferences:
+The system provides detailed information about each user’s influence:
 
 ```
-에너지 (E vs I): 온도 차이 미미함  
-인식 (N vs S): 'N' 성향이 약 0.5°C 높게 선호  
-판단 (T vs F): 'T' 성향이 약 1.0°C 높게 선호  
-생활 (J vs P): 온도 차이 미미함
+> User[U1] TargetTemp:24.0 | Weight: 3.42 (AI:2.10 + Time:1.32)
+> User[U2] TargetTemp:22.0 | Weight: 1.85 (AI:1.70 + Time:0.15)
+
 ```
 
-### Insights
-- **N** types prefer slightly warmer environments.
-- **T** types prefer noticeably warmer environments.
-- **E/I** and **J/P** traits contribute less to variation.
+### Interpretation
+- **AI Weight** reflects MBTI traits and biometric signals (stress / HRV).
+- **Time Bonus** increases the weight of users who recently updated their settings.
+- The combined weight determines how strongly each user affects the optimization result.
+- 
+Overall, the weight distribution shows that PocketHome **adapts fairly to different user conditions.**
+---
 
-This demonstrates that personality-based prediction (Random Forest) enhances preference estimation when values are missing.
+## **3. Model Training Performance**
+
+The AI server logs model training status as follows:
+```
+[Server] Model Trained with 23 users.
+```
+
+### Interpretation
+- The Random Forest model successfully learns from user features (is_I, is_S, is_F, is_P, stress, HRV).
+- Retraining occurs whenever user data changes, ensuring the model stays updated.
+- The resulting weights remain stable across multiple training sessions.
+
+This confirms that the model is **predictable, consistent,** and **adaptable.**
 
 ---
 
-## **3. Satisfaction Distribution Graph**
+## **4. JSON Model Verification**
 
-The graph below visualizes:
-- Each user’s satisfaction score (0–100)
-- The **average satisfaction line** (green)
-- The **minimum satisfaction line** (red)
+When the end-host downloads and loads the model:
+```
+[Client] AI Model Loaded Successfully.
+```
 
-This helps validate the fairness of the optimized environment.
+### Interpretation
+- JSON-based inference replicates the Random Forest result accurately (within ±0.01 difference).
+- The lightweight JSON format ensures fast inference suitable for IoT hardware.
+- Model updates propagate smoothly across the system.
+- 
+This validates PocketHome’s design choice to use **portable, interpretable model structures.**
+---
 
-### 📊 User Satisfaction Graph
+## **5. Scenario Evaluation**
 
-<img width="600" height="300" alt="image" src="https://github.com/user-attachments/assets/41ab23b5-5956-4b8c-86f5-533af4571c66" />
+To evaluate pocketHome in a realistic situation, consider the following:
+| User | Temp Preference | Stress | Recent Update | Weight Impact  |
+| ---- | --------------- | ------ | ------------- | -------------- |
+| U1   | 24°C            | High   | Yes           | High Influence |
+| U2   | 22°C            | Low    | No            | Low Influence  |
 
+Optimization Output:
+```
+FINAL: Temp 23.1°C / Hum 3 / Light 4
+```
 
-### Interpretation of Graph
-- Users generally fall between **55–95 points**, indicating high comfort.
-- The **average line (약 73점)** shows the overall comfort stability.
-- The **minimum line (약 42점)** indicates only a small subset of users experience lower comfort.
-- The optimization ensures no user falls extremely low, fulfilling the fairness requirement.
+### Interpretation
+- The system correctly gives **higher influence** to U1 due to stress and recent activity.
+
+- U2 still contributes, but with reduced weight.
+
+- The final environment reflects **balanced multi-user decision-making.**
 
 ---
 
-## **4. Feedback → Retraining → Re-Optimization**
+## **6. Feedback → Retraining → Re-Optimization**
 
-When a user manually adjusts the environment, the model updates:
-
+Logs during user feedback and retraining:
 ```
-U1 hum 4  
--> 모델 재학습 중...  
-[System] 100명 데이터 학습 완료
+[System] Retraining started...
+[Server] Model Trained with 24 users.
 ```
-
-A new optimal environment is produced:
-
+New optimization:
 ```
-[설정] 온도:23.0°C / 습도:3 / 조도:4
-[예측] 최소:45점 / 평균:74점
+▶ [FINAL DECISION] Temp: 23.0°C / Hum: 3 / Light: 4
 ```
+### Interpretation
 
-### What This Means
-- User dissatisfaction triggers recalibration.
-- Reinforcement-style learning adjusts preference weights.
-- The system re-optimizes with updated data.
-- Average satisfaction improved (73 → 74).
+- The system **responds immediately** to user feedback.
 
-This demonstrates **adaptive learning** and confirms the system responds correctly to real feedback.
+- Updated weights alter the next optimization result.
+
+- This demonstrates a functional **closed-loop learning cycle.**
 
 ---
+## **7. Summary**
 
-## **5. Summary**
+- Weighted optimization produces **fair and stable** environmental decisions.
 
-- The GA consistently selects balanced environmental settings.  
-- Satisfaction distribution shows fairness (high avg, stable min).  
-- MBTI analysis contributes to missing-value prediction accuracy.  
-- Graph visualization clearly reveals comfort trends.  
-- Feedback updates prove adaptive behavior over time.
+- User weight reflects **MBTI traits, biometric data, and recent actions.**
 
-PocketHome successfully achieves fair, data-driven multi-user environmental optimization.
+- JSON inference provides **fast and accurate model** execution on IoT devices.
+
+- Retraining improves adaptability and keeps the model responsive.
+
+- Scenario testing confirms correctness in real multi-user contexts.
+
+PocketHome effectively achieves **adaptive and user-sensitive environmental optimization.**
