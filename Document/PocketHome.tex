@@ -528,7 +528,7 @@ END FUNCTION \end{lstlisting} }
     \def\arraystretch{1.24} \small
     \begin{tabular}{|p{3.7cm}|p{4.1cm}|}\hline
          Directory& File Names\\\hline
-         /Backend AI Model&  model.py \par endhost.py\\\hline
+         /BackendAIModel&  virtualMachineConfig.txt \par weight_model_server.py\\\hline
     \end{tabular}
 \end{table}
 \subsubsection{Document}
@@ -579,7 +579,7 @@ END FUNCTION \end{lstlisting} }
 
         \begin{tabular}{|p{3.7cm}|p{4.1cm}|}\hline
          Directory& File Names\\\hline
-         /Place End Host&  PocketHome.pdf \par PocketHome.tex\\\hline
+         /PlaceEndHost&  end_host.py\\\hline
     \end{tabular}
     
     
@@ -627,10 +627,10 @@ END FUNCTION \end{lstlisting} }
 \begin{itemize}
     \item \textbf{Purpose}\par\quad The Backend Module of PocketHome stores users' preferences to database on cloud. Database is managed on cloud environment, and virtual machine brings that database to make the best AI Model. After building an AI model, it spreads the model to end hosts of places. Also it gives end hosts the user's information based on user presence from places.\\
     \item \textbf{Functionality}\par\quad It stores user's preferences in form of NoSQL on Firebase. Firebase provides database to virtual machine on Google Cloud. Virtual machine works on Ubuntu, and it periodically get database to build a best model for mediation of user preferences. Model is trained by scikit learn of Python. After building a model, the model is delivered to end host of each place by FastAPI.\\
-    \item \textbf{Location of Source Code}\par \quad \url{https://github.com/LeeSiwoong/PocketHome/tree/main/Backend\%20AI\%20Model} \\
+    \item \textbf{Location of Source Code}\par \quad \url{https://github.com/LeeSiwoong/PocketHome/tree/main/BackendAIModel} \\
     \item \textbf{Class Component} \begin{itemize}
-    \item build.gradle.kts: It defines build configuration of project.
-    \item gradle.properties: It controls the performance settings of the Gradle build system.
+    \item virtualMachineConfig.txt: It helps configurating virtual machine.
+    \item weight\_model\_server.py: It is the code for training the model.
 
         \end{itemize}
 \end{itemize}
@@ -640,10 +640,9 @@ END FUNCTION \end{lstlisting} }
 \begin{itemize}
     \item \textbf{Purpose}\par\quad The Place Module of PocketHome is for actual performance for each place. Every end host for every place works separately, but the main logic is same due to the model downloaded from the main single server. It collects the user presence and call their information from database.\\
     \item \textbf{Functionality}\par\quad It defines if particular user is in that place by using Bluetooth advertisement every 5 minutes, and get their user preferences from database. Device that performs this mechanism is called control device, and it must be connected to network to get the information from cloud. Also, it computes the best single optimized environment by running model, which is downloaded from virtual machine.\\
-    \item \textbf{Location of Source Code}\par \quad \url{https://github.com/LeeSiwoong/PocketHome/tree/main/Place\%20End\%20Host} \\
+    \item \textbf{Location of Source Code}\par \quad \url{https://github.com/LeeSiwoong/PocketHome/tree/main/PlaceEndHost} \\
     \item \textbf{Class Component} \begin{itemize}
-    \item build.gradle.kts: It defines build configuration of project.
-    \item gradle.properties: It controls the performance settings of the Gradle build system.
+    \item end\_host.py: It is the code for downloading json file on control device.
 
         \end{itemize}
 \end{itemize}
@@ -667,7 +666,7 @@ END FUNCTION \end{lstlisting} }
     \caption{ID Initialization Screen}
     \label{fig:placeholder}
 \end{figure}
-\quad This screen is shown only when user launched the application for the first time, or when the user deleted the ID which triggers the deletion of user information. User enters the own unique ID. If there exists the same ID in database, user cannot continue to the main page. If the user clicks the button of user agreement, a text box appears that shows the requirements for the users to use this application. After entering the main screen, this screen does not appear until the ID is deleted.
+\quad This screen is shown only when user launches the application for the first time, or when the user deletes the ID which triggers the deletion of user information. The user enters the own unique ID. If there exists the same ID in database, user cannot continue to the main page. If the user clicks the button of user agreement, a text box appears that shows the requirements for the users to use this application. After entering the main screen, this screen does not appear until the ID is deleted.
 
 \subsection{Main Screen}
 \begin{figure}[H]
