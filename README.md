@@ -472,6 +472,7 @@ PocketHome’s methodology integrates four key ideas:
 
 This design ensures fairness, responsiveness, and interpretability across a multi-user shared environment.
 
+---
 
 # IV. Evaluation & Analysis
 
@@ -602,3 +603,176 @@ New optimization:
 - Scenario testing confirms correctness in real multi-user contexts.
 
 PocketHome effectively achieves **adaptive and user-sensitive environmental optimization.**
+
+---
+# V. Related Work
+
+This section summarizes the existing studies, tools, libraries, and documentation referenced during the development of PocketHome.
+The project combines machine learning, IoT device inference, and cloud-based user data management, and therefore relies on several established technologies and prior concepts.
+
+---
+## 1. Existing Studies & Concepts
+
+- **Context-Aware Smart Environment Systems**
+
+Research on context-aware computing shows how environmental systems can adapt to user behavior, stress levels, or biometric states.
+PocketHome extends this concept by incorporating MBTI traits and a portable Random Forest model.
+
+- **Edge/On-Device Inference in IoT Systems**
+
+Several studies highlight that IoT environments require lightweight ML models.
+PocketHome applies this principle by exporting a Random Forest into JSON decision trees for on-device execution.
+
+- **Multi-User Preference Aggregation**
+
+Prior work in shared-environment optimization discusses fairness and weighted decision-making.
+PocketHome uses a weight-based aggregation strategy instead of simple averaging, aligning with these fairness-driven approaches.
+
+---
+
+## 2. Tools and Libraries Used
+
+### Backend / AI Model
+
+- **Python 3.10+** – Main backend language
+
+- **scikit-learn (RandomForestRegressor)** – Used to train the sensitivity weight model
+
+- **FastAPI** – Provides lightweight and fast server endpoints
+
+- **Uvicorn** – ASGI server used to host FastAPI
+
+- **Firebase Admin SDK (Python)** – Handles Firestore communication
+
+- **JSON Serialization** – Converts trained ML models into portable decision-tree format
+
+### Frontend / Mobile App
+
+- **Flutter** – Cross-platform mobile app framework used for UI and user data input
+
+- **Dart** – Programming language for Flutter
+
+- **Firebase Auth / Firestore** – Used for user management and storing preferences
+
+### IoT End-Host Device
+
+- **Python on IoT hardware** – Executes JSON model inference
+
+- **Requests Library** – Fetches updated AI models from the server
+
+- **Datetime / Time Libraries** – Compute time-based weight bonuses
+
+---
+
+## 3. Documentation & References
+
+### Official Documentation
+
+- Firebase Documentation (Firestore, Authentication)
+
+- Flutter Documentation (State management, Firebase integration)
+
+- FastAPI Documentation
+
+- Scikit-Learn Documentation (RandomForestRegressor)
+
+### Technical Blogs & References
+
+- Tutorials on converting ML models into lightweight formats
+
+- Articles on edge AI inference and IoT model deployment
+
+- Guides on JSON decision-tree traversal for embedded systems
+
+---
+
+## 4. Summary
+
+PocketHome builds upon:
+- **Smart environment research** on adaptive and context-aware systems
+
+- **Edge computing techniques** that enable local ML inference
+
+- **Weighted preference aggregation** studied in multi-user environments
+
+- **Modern development tools** such as Flutter, Firebase, FastAPI, and scikit-learn
+
+Together, these references form the foundation for PocketHome’s **AI-driven multi-user environment optimization system.**
+
+---
+
+# VI. Conclusion: Discussion
+PocketHome began with a simple question: *How can multiple people share the same physical environment comfortably?*  
+Throughout the project, this idea grew into a functioning system that combines machine learning, user modeling, and lightweight on-device inference.  
+The outcome is not just an automated controller, but an environment that responds intelligently to the people inside it.
+
+---
+
+## 1. What We Learned About Multi-User Environments
+Designing an environment for a single user is straightforward.  
+Optimizing one for several users—with different preferences, personalities, stress levels, and update patterns—is far more complex.
+
+Through this project, we learned that:
+- Comfort varies not only by preference but also by **physiological and behavioral context**.  
+- A fair environment emerges when user influence is **weighted dynamically**, not statically.  
+- Combining MBTI traits, biometric data, and recency produces **more human-centered optimization** than simple averaging.
+
+PocketHome demonstrated that multi-user adaptation is both achievable and meaningful when the system understands *how different users feel and behave*.
+
+---
+
+## 2. Technical Insights From the System
+A key technical achievement of PocketHome was proving that **heavy AI is not required** to build an intelligent environment.
+
+By exporting a Random Forest model into JSON and executing it directly on the end-host device:
+- Inference became **fast, lightweight, and transparent**.  
+- The system avoided complex ML dependencies.  
+- The architecture remained easy to debug, portable, and suitable for IoT deployment.
+
+The weighted-aggregation method consistently produced **stable and interpretable** environment decisions, reinforcing that carefully engineered simple models can outperform unnecessary complexity.
+
+---
+
+## 3. Observations During Testing
+During experimentation, several meaningful behaviors appeared:
+
+- The system naturally converged toward **moderate, balanced** temperature ranges when preferences conflicted.  
+- Users with high stress or recent actions gained proportionally more influence, reflecting **real human sensitivity**.  
+- Retraining caused visible shifts in results, confirming that the model **adapts dynamically** instead of repeating static rules.
+
+These observations show that PocketHome behaves like a system that *learns* rather than one that simply *executes*.
+
+---
+
+## 4. Limitations Identified
+Although successful, PocketHome has clear limitations:
+
+- Limited biometric sampling may not fully reflect users’ physiological states.  
+- MBTI offers structure but cannot capture the full spectrum of personality differences.  
+- Weighted averaging, while effective, may not fully resolve complex conflicts or extreme cases.  
+- Real HVAC and lighting hardware integration remains unimplemented.
+
+Recognizing these limitations guides future development.
+
+---
+
+## 5. Future Possibilities
+With further development, PocketHome can evolve into a more advanced system:
+
+- Integration with actual IoT hardware for **real-time environmental adjustment**  
+- Collecting broader datasets from real environments  
+- Applying reinforcement learning for adaptive, long-term improvement  
+- Introducing user feedback mechanisms  
+- Expanding across multiple rooms or entire buildings  
+- Building more sophisticated models of human comfort and stress
+
+These directions position PocketHome as a candidate for *next-generation smart space systems*.
+
+---
+
+## 6. Final Remarks
+This project highlighted that environmental control is ultimately a **human-centered challenge**, not just a technical one.  
+PocketHome shows that with thoughtful feature design, efficient machine learning, and adaptive logic, even lightweight systems can significantly improve the comfort of shared environments.
+
+Rather than treating rooms as static, PocketHome aims to understand the people within them—and respond accordingly.  
+It represents a meaningful step toward more intelligent, personalized, and human-aware living spaces.
