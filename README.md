@@ -9,7 +9,9 @@ AI-driven Environmental Optimization Through Multi-User Preference Mediation [Po
 # PocketHome
 'PocketHome' is an AI-based automated control system that creates an optimal environment for multiple people at once. It works by combining user preferences, observed behaviors, and real-time environmental data from sensors in the space. Using this information, the system automatically adjusts shared appliances like heating/cooling systems, air purifiers, and lighting. The AI's main task is to find a balance that keeps the largest number of people comfortable and satisfied. The system's core technology, reinforcement learning, treats any manual adjustments by users as feedback, allowing it to continuously improve how it operates. This learning process reduces the need for people to make changes themselves.
 
-<video src="https://github.com/LeeSiwoong/PocketHome/raw/main/Document/PocketHomeDemoVideo.mp4" controls width="640"></video>
+[![PocketHome Demo Video](https://img.youtube.com/vi/wpTIaMz8HD0/0.jpg)](https://youtu.be/wpTIaMz8HD0)
+
+▶️ Click image to watch demo video on YouTube.
 
 # I. Introduction
 
