@@ -16,9 +16,9 @@ Instead of reinforcement learning, PocketHome uses a lightweight machine-learnin
 This model is retrained regularly as new data is added, allowing the system to continuously improve without requiring manual adjustments.
 
 
-[![PocketHome Demo Video](https://img.youtube.com/vi/wpTIaMz8HD0/0.jpg)](https://youtu.be/wpTIaMz8HD0)
+[![PocketHome Introduction Video](https://img.youtube.com/vi/wSMprDeAV1Q/0.jpg)](https://youtu.be/wSMprDeAV1Q)
 
-▶️ Click image to watch demo video on YouTube.
+▶️ Click image to watch introduction video on YouTube.
 
 # I. Introduction
 
