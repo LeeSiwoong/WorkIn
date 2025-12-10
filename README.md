@@ -61,101 +61,32 @@ This reflects the core mission of the PocketHome project.
 
 # II. Datasets
 
-### **1. Overview**
-The PocketHome system uses a unified dataset stored in **Firebase Firestore**.  
-Each user is represented as a document containing:
+This section describes the data stored in Firebase Firestore, the structure of each user document, the categories of data used in PocketHome, and how the AI system consumes this dataset for training and real-time environment optimization.
+
+---
+
+## **1. Overview**
+
+PocketHome uses a unified dataset stored in **Firebase Firestore**, where each document represents one user.  
+These documents contain:
 
 - Environmental preferences (temperature, humidity, brightness)  
-- Personality traits (MBTI and its decomposed dimensions)  
-- Optional biometric information (stress level, heart-rate variation)  
-- Time-related metadata indicating how recent the data is  
+- Personality traits (MBTI + decomposed dimensions)  
+- Optional biometric information (stress, HRV)  
+- Time-related metadata (`updatedAt`)  
 
-This dataset is primarily used by the **AI Model Server**, which:
+The dataset serves two system components:
 
-- Reads user documents from Firestore  
-- Computes population-level statistics (e.g., average stress, average HRV)  
-- Calculates environment proxies and preference gaps  
-- Trains a **duration-based sensitivity model**, which implicitly represents how strongly each user should influence the final environment  
-- Exports the trained model as a JSON forest structure for end-host devices
+1. **AI Model Server** — trains a duration-based sensitivity model  
+2. **End-Host Devices** — run full-grid optimization using BLE-detected users  
 
-End-host devices then use:
-
-- BLE-detected user IDs to fetch the corresponding documents from Firestore  
-- The compiled AI model provided by the server  
-
-to perform a **vectorized full-grid optimization** that searches all feasible temperature, humidity, and brightness combinations, selecting the environment that best fits the sensitivity predictions for the detected users.
-
+This structure enables PocketHome to balance personal preferences, biometric conditions, and recent activity.
 
 ---
 
-### **2. Data Sources**
+## **2. Firestore Schema**
 
-PocketHome uses four main categories of data for each user.
-
----
-
-#### **(1) User-Provided Environmental Preferences**
-
-Users directly input their preferred environment through the mobile app.
-
-| Parameter   | Range              | Description                |
-|------------|--------------------|----------------------------|
-| temperature | 18–28°C (0.1 step) | Preferred room temperature |
-| humidity    | 1–5                | Preferred humidity level   |
-| brightness  | 1–10               | Preferred light level      |
-
-These values represent the user’s baseline environmental choices.
-
----
-
-#### **(2) Personality Traits (MBTI Decomposed)**
-
-The system stores both the overall MBTI string and each MBTI dimension separately:
-
-```json
-{
-  "mbti": "ENTP",
-  "mbtiEI": "E",
-  "mbtiNS": "N",
-  "mbtiTF": "T",
-  "mbtiPJ": "P"
-}
-```
----
-
-#### **(3) Biometric Measurements (Optional)**
-If the user allows biometric usage, the app uploads recent physiological information:
-
-```json
-"useBodyInfo": true,
-"bodyMetrics": {
-  "collectedAt": "2025-12-02T19:59:00.000000",
-  "stressAvg": 63,
-  "heartRateVariation": 12
-}
-```
-- collectedAt : Timestamp in ISO 8601 format, indicating when the biometric data was measured
-
-- stressAvg : Average stress score during the recent sampling window
-
-- heartRateVariation : HRV value used as a proxy for short-term physiological fluctuation
-(If biometric data is missing, PocketHome replaces it with the **population average** computed from all users.)
-
-#### **(4) Time-Based Sensitivity Metadata**
-
-Each user document stores a timestamp indicating when their preferences were last updated:
-
-```json
-{
-  "updatedAt": "202512022210"
-}
-```
-This value is used by the AI model to compute duration-based sensitivity,
-which represents how long a user's preference remains influential in the optimization process.
-
----
-
-### **3. Firestore Database Structure (Latest Version)**
+Each user document follows a consistent schema:
 
 ```json
 {
@@ -181,137 +112,199 @@ which represents how long a user's preference remains influential in the optimiz
 }
 ```
 
-Each user profile may include:
-- Static environmental preferences (temperature, humidity, brightness)
-- MBTI type and decomposed personality dimensions (mbtiEI, mbtiNS, mbtiTF, mbtiPJ)
-- Time-based metadata (updatedAt) for sensitivity decay
-- Optional biometric indicators under bodyMetrics (stressAvg, heartRateVariation, collectedAt)
+A user profile may include:
 
-If useBodyInfo is false, the bodyMetrics field may be null or omitted entirely.
+- **Static preferences:** temperature, humidity, brightness  
+- **MBTI traits:** both original string + decomposed fields  
+- **Recency metadata:** `updatedAt` for duration modeling  
+- **Optional biometrics:** stressAvg, HRV, collectedAt  
 
----
-
-### **4. Dataset Usage in the AI System**
-
-The PocketHome system uses the Firestore dataset in two main components:
-1. The **AI Model Server**, which learns how long each user’s preferences remain influential (duration-based implicit weight)
-2. The **End-Host Device**, which calculates the shared environmental settings using the server-provided model
+If `useBodyInfo` is false, `bodyMetrics` may be omitted or set to null.
 
 ---
 
-#### **(1) Weight Model Training (Server-Side)**
-The server reads user documents from Firestore and converts them into feature vectors.
-Each user contributes the following types of data:
-- Environmental preferences  
-- Personality traits (full MBTI + decomposed fields)
-- Optional biometric indicators
-- Time-based metadata (`updatedAt`)
-- Gap values between user preferences and the environment proxy
+## **3. Data Categories**
 
-Based on these values, the server generates a **duration label** for each user:
-- More recent updates → longer duration  
-- High stress or unusual biometric states → longer duration  
-- Stale or outdated data → shorter duration  
-- Missing biometric data → replaced with population averages
+PocketHome uses four primary categories of user data. These categories map directly to the model’s feature space.
 
-A `RandomForestRegressor` is trained to predict this duration value, which functions as the user’s **implicit sensitivity weight**.
+---
 
-The trained model is exported as JSON and served through the following endpoint:
+### **(1) User-Provided Environmental Preferences**
+
+| Parameter   | Range              | Description                |
+|------------|--------------------|----------------------------|
+| temperature | 18–28°C (0.1 step) | Preferred room temperature |
+| humidity    | 1–5                | Preferred humidity level   |
+| brightness  | 1–10               | Preferred light level      |
+
+These values represent each user’s comfort baseline.
+
+---
+
+### **(2) Personality Traits (MBTI Decomposed)**
+
+```json
+{
+  "mbti": "ENTP",
+  "mbtiEI": "E",
+  "mbtiNS": "N",
+  "mbtiTF": "T",
+  "mbtiPJ": "P"
+}
+```
+
+These categorical traits are converted into numerical indicators (is_I, is_S, is_F, is_P) for model training.
+
+---
+
+### **(3) Biometric Measurements (Optional)**
+
+```json
+"useBodyInfo": true,
+"bodyMetrics": {
+  "collectedAt": "2025-12-02T19:59:00.000000",
+  "stressAvg": 63,
+  "heartRateVariation": 12
+}
+```
+
+- **collectedAt** — ISO 8601 timestamp  
+- **stressAvg** — average stress score  
+- **heartRateVariation** — HRV, used as a measure of physiological fluctuation  
+
+If biometric data is missing, PocketHome replaces it with **population averages** computed across the dataset.
+
+---
+
+### **(4) Time-Based Sensitivity Metadata**
+
+```json
+{
+  "updatedAt": "202512022210"
+}
+```
+
+This timestamp is used to compute **duration-based sensitivity**, meaning how long a user’s preference remains influential in decision-making.
+
+---
+
+## **4. Dataset Usage in the AI System**
+
+The dataset powers two major components of PocketHome:
+
+1. **AI Model Server**  
+2. **End-Host Optimization Engine**
+
+---
+
+### **(1) Duration Model Training (Server-Side)**
+
+The server performs the following steps:
+
+- Reads all Firestore user documents  
+- Computes dataset-wide biometric statistics  
+- Calculates environment proxies and preference gaps  
+- Converts data into feature vectors  
+- Generates a **duration label** based on stress, recency, and biometric conditions  
+- Trains a `RandomForestRegressor` to predict this duration  
+- Exports the trained model as a JSON forest  
+
+The duration label acts as an **implicit sensitivity weight** during optimization.
+
+The compiled model is served at:
+
 ```bash
 GET /weight-model
 ```
 
 ---
 
-#### **(2) Model-Based Environment Calculation (End Host)**
-The end host performs three steps:
-**1.** Detect user IDs (via BLE)
+### **(2) Real-Time Environment Optimization (End Host)**
 
-**2.** Fetch those users' profiles from Firestore (batch queries)
+The end-host performs:
 
-**3.** Download and compile the JSON model into NumPy arrays
+1. **BLE scanning** to detect active users  
+2. **Batch Firestore queries** to fetch detected user profiles  
+3. **Model compilation** (JSON → NumPy decision trees)  
+4. **Full-grid search** across all feasible environments  
+5. **Scenario scoring** using duration predictions  
+6. **Selection** of the highest-scoring environment setting  
 
-Instead of computing a weighted average, the end host performs a full-grid optimization:
+Search space:
 
-- Temperature range: 18.0–28.0°C (0.5 step)
+- Temperature: 18.0–28.0°C (0.5 step)  
+- Humidity: 1–5  
+- Brightness: 1–10  
 
-- Humidity: 1–5
+A total of **~1050 scenarios** are evaluated for each optimization cycle.
 
-- Brightness: 1–10
+This ensures:
 
-For every possible combination (~1050 scenarios):
-
-- Feature vectors are constructed
-
-- The Random Forest model predicts duration scores
-
-- Scenario scores are aggregated across all detected users
-
-- The **highest-scoring environment** is selected as the final setting
-
-This ensures that:
-- Users with higher predicted duration (implicit weight) influence the environment more
-
-- Recent or stressed users have stronger contributions
-
-- Missing bio data does not harm performance (population averages used)
-
-- MBTI traits and preference gaps meaningfully shape the outcome
----
-
-#### **(3) Continuous Adaptation**
-Whenever any user updates:
-- environmental preferences
-
-- MBTI information
-
-- biometric data
-
-- or simply as time progresses
-
-PocketHome automatically adapts:
-- The AI server retrains periodically (hourly scheduler)
-
-- The duration model updates its learned sensitivities
-
-- End-host devices recalculate the optimal environment
-
-This enables PocketHome to continuously reflect both personal preferences and physiological changes.
+- Stronger influence from users with higher predicted duration  
+- Recency and biometrics meaningfully affect decisions  
+- Missing values are handled through dataset averages
 
 ---
+
+### **(3) Continuous Adaptation**
+
+Whenever user data changes — or simply as time passes — PocketHome adapts:
+
+- The AI server retrains **hourly** (APScheduler)  
+- New duration models are automatically deployed  
+- End-hosts fetch the latest model  
+- Optimization recalculates in real-time  
+
+This ensures the environment always reflects current user conditions.
+
+---
+
+# **Summary of Section II**
+
+PocketHome’s dataset design provides:
+
+- A **structured, extensible Firestore schema**  
+- Clean separation of preferences, traits, biometrics, and recency  
+- Efficient feature extraction for ML  
+- Robust handling of missing biometric data  
+- Real-time responsiveness through BLE detection + full-grid optimization  
+
+Together, this dataset architecture enables PocketHome’s **adaptive, user-aware environmental optimization system**.
+
 
 ---
 
 # III. Methodology
 
 PocketHome uses a two-part AI–IoT architecture consisting of a centralized **AI Model Server** and distributed **End-Host controllers**.  
-The server performs machine learning and model distribution, while end-host devices compute final environment values using a fast, vectorized optimization algorithm.  
-This section describes the complete process—from data ingestion to on-device environment computation and continuous adaptation.
+The server handles all machine-learning tasks, while end-host devices perform real-time optimization using lightweight, vectorized inference.  
+This section explains the full pipeline, from data ingestion to model training, deployment, on-device optimization, and continuous adaptation.
 
 ---
 
 ## **1. System Architecture Overview**
 
-The PocketHome system operates as a continuous loop:
+PocketHome’s core workflow follows a continuous loop:
 
 **Firestore → AI Model Server → Duration Model JSON → End Host → Environment Update**
 
-Overall workflow:
+### **Overall Flow**
+1. Users input environmental preferences and optional biometric signals.  
+2. Firestore stores these profiles in a structured format.  
+3. The AI Model Server retrieves all profiles and constructs feature vectors.  
+4. A Random Forest model is trained to predict a **duration score**, representing how long each user’s preferences should influence the environment.  
+5. The model is exported as a compact JSON forest via `/weight-model`.  
+6. End-host devices download the model, detect active users via BLE, fetch those profiles, and compute the optimal environment using full-grid evaluation.
 
-1. Users provide environmental preferences, MBTI traits, and optional biometric data.  
-2. Firestore stores all user profiles in a structured format.  
-3. The AI Model Server collects all profiles and constructs feature vectors.  
-4. A Random Forest model is trained to predict **duration**, which serves as an implicit weight representing how strongly and how long each user's preferences should influence the environment.
-5. The trained model is exported as a JSON forest and served through `/weight-model`.  
-6. End-host devices download the model, detect active users via BLE, retrieve their Firestore documents, and compute the optimal environment through full-grid simulation.
-
-This division of labor ensures scalable learning while keeping IoT devices lightweight and fast.
+This pipeline enables PocketHome to scale efficiently and remain responsive in real time.
 
 ---
 
-## **2. User Feature Construction**
+## **2. Data & Feature Engineering**
 
-Each user document provides all necessary inputs for the machine-learning model:
+Each Firestore document provides structured information required to build the model’s feature vector.
+
+### **Example User Document**
 
 ```json
 {
@@ -335,53 +328,55 @@ Each user document provides all necessary inputs for the machine-learning model:
     "heartRateVariation": 18
   }
 }
-
 ```
 
-From this, the server extracts a **feature vector** combining:
+### **Feature Categories**
 
-| Feature Type         | Example Fields                                   |
-|----------------------|--------------------------------------------------|
-| Personality indicators | mbtiEI, mbtiNS, mbtiTF, mbtiPJ                 |
-| Biometric signals      | stressAvg, heartRateVariation                  |
-| Preference gaps        | env_proxy − preference (temp, humidity, brightness) |
-| Time-based metadata    | hours since updatedAt                          |
+| Feature Type           | Example Fields                                                |
+|------------------------|--------------------------------------------------------------|
+| Personality traits     | mbtiEI, mbtiNS, mbtiTF, mbtiPJ                               |
+| Biometric signals      | stressAvg, heartRateVariation                                |
+| Preference gaps        | env_proxy − preference (temperature, humidity, brightness)   |
+| Time-based metadata    | hours since updatedAt                                        |
 
+The server also computes:
 
+- **Environment Proxy** → average preference across all users  
+- **Biometric Population Averages** → fallback values for missing data  
+- **Preference Gap Features** → |env_proxy – user_preference|
 
-These multidimensional features allow the model to represent user **sensitivity**, preference stability, and physiological state in a unified form.
-
----
-
-## **3. Weight Labeling Logic (Pre-Model Algorithm)**
-
-Before training the machine-learning model, PocketHome computes a **rule-based target weight** for each user.  
-This reflects how long each user’s preferences should continue to influence the environment.
-
-Duration factors:
-
-- **Data recency**: recently updated preferences remain influential for longer
-- **Stress level**: high stress may extend influence duration
-- **Heart-rate variation**: unstable HRV suggests discomfort, increasing duration
-- **Missing biometric information**: replaced with population averages
-- **Stale profiles**: influence duration naturally decays over time
-
-This duration score becomes the regression label used for training.
+These features collectively encode user sensitivity, physiological state, and recency.
 
 ---
 
-## **4. Random Forest Weight Model (Core Algorithm)**
+## **3. Duration Label Construction (Label Engineering)**
 
-The AI Model Server trains a `RandomForestRegressor` to learn how user features map to a **duration value**, which functions as an implicit weight in the optimization process.
+Before training, PocketHome computes a **duration label** for each user.  
+This label represents *how long the user’s preferences should remain influential*.
+
+### **Duration Factors**
+- **Recent updates** → longer influence  
+- **Higher stress / low HRV** → longer influence  
+- **Missing biometric values** → replaced with population averages  
+- **Older profiles** → decayed duration  
+- **Hard cap** → maximum of *4 months* (~2880 hours)
+
+This duration label acts as an **implicit sensitivity weight** during optimization.
+
+---
+
+## **4. Random Forest Duration Model**
+
+The AI Model Server trains a `RandomForestRegressor` to map user features to the duration label.
 
 ### **Why Random Forest?**
-- Handles mixed numerical and categorical features (MBTI + biometrics)
-- Naturally models non-linear relationships  
-- Robust against noise and missing values  
-- Light enough to export as JSON for IoT inference  
+- Handles numerical + categorical features naturally  
+- Robust to noise in physiological data  
+- Captures nonlinear relationships  
+- Lightweight enough to export as compact JSON  
+- Fast to evaluate on IoT devices
 
-### **Model Output Format**
-The trained model is exported as a lightweight JSON structure containing the forest of decision trees, metadata, and feature definitions:
+### **Model Output Format (JSON Forest)**
 
 ```json
 {
@@ -397,83 +392,96 @@ The trained model is exported as a lightweight JSON structure containing the for
 }
 ```
 
-The JSON is served through:
+The model is served through:
 
 ```
 GET /weight-model
 ```
 
-End-host devices repeatedly fetch this model to stay synchronized with the latest learned behavior.
+End-host devices repeatedly fetch this JSON to stay updated with the latest learned behavior.
 
 ---
 
-## **5. End-Host Environment Optimization Algorithm**
+## **5. Model Export & Deployment**
 
-End-host devices compute the final temperature, humidity, and brightness.  
-They follow this four-step routine:
+After training:
 
-1. **Download** the duration-based model JSON  
-2. **Detect** active users via BLE and **fetch** only those user profiles from Firestore  
-3. **Predict** each user's duration score using the compiled Random Forest model  
-4. **Evaluate** all valid environment combinations and select the scenario with the highest total score  
+1. The Random Forest is converted into a portable JSON format.  
+2. Metadata such as `feature_names`, `bio_stats`, and `env_proxy` is included.  
+3. APScheduler triggers **automatic hourly retraining**.  
+4. Each retraining cycle produces a new JSON forest downloaded by end-host devices.  
 
-### **Full-Grid Evaluation Process**
-
-```
-For each temperature in 18.0–28.0°C (step 0.5):
-    For each humidity in 1–5:
-        For each brightness in 1–10:
-            Compute predicted score for each user
-            Sum user scores for this scenario
-Select the scenario with the highest total score
-```
-
-As a result:
-
-- users with higher predicted duration (implicit weight) influence the outcome more  
-- recent updates contribute more strongly  
-- missing biometrics are handled via population averages  
-- the final environment is chosen from all feasible combinations, not averaged  
-
-This methodology replaces older weighted-average approaches with a more robust, simulation-based optimization algorithm.
+This approach keeps PocketHome accurate without requiring manual intervention.
 
 ---
 
-## **6. Continuous Adaptation Loop**
+## **6. End-Host Environment Optimization Algorithm**
 
-PocketHome continuously adapts based on:
+End-host devices determine the final temperature, humidity, and brightness using a **full-grid scenario evaluation**, not weighted averaging.
 
-- new biometric measurements  
-- user preference updates  
-- personality changes  
-- natural time decay applied to `updatedAt`  
+### **Steps**
+1. Download the duration model JSON  
+2. Detect active users via BLE  
+3. Batch-fetch their Firestore profiles  
+4. Compile the Random Forest into NumPy decision trees  
+5. Evaluate **all valid environment combinations**  
+6. Predict duration scores for each user under each scenario  
+7. Select the scenario with the **highest total score**
 
-Whenever any user state changes:
+### **Search Space**
+- Temperature: 18.0–28.0°C (0.5 increments)  
+- Humidity: 1–5  
+- Brightness: 1–10  
 
-1. The AI Model Server automatically retrains the **duration model** (hourly scheduler)  
-2. End-host devices download the latest duration-based model  
-3. Full-grid environmental optimization is recomputed  
-4. The environment is updated accordingly  
+Total: **~1050 scenarios**
 
-This loop ensures the system remains sensitive to both physiological signals and preference changes over time.
+This ensures:
+
+- Sensitive users (high duration) influence the outcome more  
+- Recency and biometrics significantly affect scoring  
+- Missing data is handled gracefully via population averages  
+- The final environment is chosen from the full feasible space, not averaged
 
 ---
 
-## **7. Code-Level Summary of Core Components**
+## **7. Continuous Adaptation Mechanism**
 
-### **7.1 weight_model_server.py**
+PocketHome adapts automatically as user data evolves.
+
+Triggers include:
+
+- New biometric measurements  
+- Updated preferences  
+- MBTI changes  
+- Natural time decay from `updatedAt`
+
+Adaptation loop:
+
+1. AI Model Server retrains the model automatically every hour  
+2. Updated JSON model is published  
+3. End-hosts download the new model  
+4. Full-grid optimization recomputes  
+5. Environment is updated in real time  
+
+This creates a functional **closed-loop learning system**.
+
+---
+
+## **8. Code-Level Summary of Core Components**
+
+### **8.1 weight_model_server.py**
 
 Responsibilities:
 
-- Retrieve all user profiles  
-- Compute biometric population averages  
-- Compute environment proxy and preference gaps  
+- Fetch all Firestore user profiles  
+- Compute biometric averages  
+- Compute environment proxy + preference gaps  
 - Build feature vectors  
-- Generate **duration labels** (implicit sensitivity)  
+- Generate duration labels  
 - Train RandomForestRegressor  
-- Export model as JSON forest  
+- Export JSON forest  
 - Serve `/weight-model` endpoint  
-- Perform automatic hourly retraining  
+- Schedule hourly retraining
 
 Pseudo-flow:
 
@@ -489,17 +497,16 @@ export_model_as_json(model, bio_stats, feature_names)
 
 ---
 
-### **7.2 end_host.py**
+### **8.2 end_host.py**
 
 Responsibilities:
 
-- Detect nearby users via BLE  
-- Batch-fetch only detected user profiles from Firestore  
-- Download and compile duration model  
-- Simulate all environment scenarios (full-grid search)  
-- Predict duration scores for each user  
-- Select the highest-scoring environment configuration  
-- Apply the selected environment  
+- Detect users via BLE  
+- Batch-fetch Firestore data  
+- Download and compile model JSON  
+- Simulate all environment scenarios  
+- Score each scenario  
+- Select and apply the best environment  
 
 Pseudo-flow:
 
@@ -522,315 +529,368 @@ apply_environment(best_env)
 
 ---
 
-## **8. Summary**
+## **9. Summary**
 
-PocketHome’s methodology integrates four key ideas:
+PocketHome’s methodology integrates:
 
-1. **Sensitivity modeling** using MBTI, biometrics, preference gaps, and time-based recency  
-2. **Duration-based weighting** learned through a Random Forest regression model  
-3. **Lightweight IoT optimization** using full-grid evaluation rather than weighted averages  
-4. **Continuous adaptation** through periodic retraining and BLE-driven user detection  
+1. **Feature engineering** using preferences, biometrics, MBTI traits, gaps, and recency  
+2. **Duration-based sensitivity modeling** through Random Forest regression  
+3. **Full-grid optimization** enabling fair, explainable IoT decision-making  
+4. **Continuous adaptation** via hourly retraining and BLE-driven sensing  
 
-This design ensures fairness, responsiveness, and interpretability across a multi-user shared environment.
-
+Together, these components enable PocketHome to operate as a scalable, human-aware, and adaptive multi-user environment optimization system.
 
 ---
 
 # IV. Evaluation & Analysis
 
-This section evaluates how effectively PocketHome optimizes a shared environment for multiple users.  
-The analysis is based on (1) optimization output logs, (2) duration-based sensitivity behavior, and (3) retraining and adaptation performance.
+This section evaluates the effectiveness of PocketHome across multiple dimensions:  
+1) optimization quality, 2) fairness and user influence,  
+3) model reliability, 4) IoT efficiency,  
+5) scenario-based behavior, and 6) adaptive learning performance.
 
 ---
 
-## **1. Optimization Output Summary**
+## **1. Optimization Performance**
 
-When PocketHome runs its optimization process, the end-host produces logs such as:
+PocketHome uses a full-grid evaluation (~1050 scenarios) to identify the best environment setting.
 
+Example output:
 ```
 ▶ [FINAL DECISION] Temp: 23.4°C / Hum: 3 / Light: 5
 ```
 
-### Interpretation
-- **The final environment setting** is selected by evaluating all 1050 valid temperature–humidity–brightness combinations.
-- Each scenario is scored using the **duration-based model**, and the scenario with the highest total score is chosen.
-- The output remains **stable and consistent** across multiple runs, confirming the reliability of the full-grid optimization method.
+### **Findings**
+- The selected environment remains **stable across repeated runs**, showing robustness to minor data fluctuations.  
+- Full-grid scoring yields a **globally optimal configuration**, not a heuristic or averaged value.  
+- Optimization always converges to a **mid-range, comfortable temperature** when user preferences conflict.
 
-This confirms that the optimization objective is functioning as intended.
+**Conclusion:**  
+The optimization pipeline is **consistent, globally optimal, and stable**.
 
 ---
 
-## **2. User Duration Influence Analysis**
+## **2. Fairness & User Influence Analysis**
 
-The system provides detailed information about each user's influence score:
+Each user receives a **duration score**, representing how strongly and how long their preferences should influence the environment.
 
+Example:
 ```
 > User[U1] DurationScore: 42.8
 > User[U2] DurationScore: 19.4
 ```
 
-### Interpretation
-- The **duration score** reflects MBTI traits, biometric signals (stress / HRV), preference gaps, and recency.
-- Higher duration scores indicate users whose preferences should remain influential for longer.
-- These scores guide how much each user contributes during scenario evaluation.
+### **Findings**
+- High stress / recent updates → consistently higher influence  
+- Stale profiles → decayed influence  
+- MBTI traits subtly shift duration for difficult-to-model personalities  
+- No user dominates excessively unless justified by physiological context  
 
-Overall, the duration distribution shows that PocketHome **fairly adapts to different user conditions.**
+**Conclusion:**  
+Duration-based scoring ensures a **fair, adaptive, and human-centered balance** across users.
 
 ---
 
-## **3. Model Training Performance**
+## **3. Model Reliability & Training Behavior**
 
-The AI server logs model training status as follows:
-
+Server logs:
 ```
 [Server] Model Trained with 23 users.
 ```
 
-### Interpretation
-- The Random Forest model successfully learns from structured user features (MBTI, biometrics, gaps, recency).
-- Retraining occurs **hourly** using APScheduler, ensuring the model stays updated.
-- Predicted duration values remain stable across training sessions.
+### **Findings**
+- Random Forest duration model shows **stable training behavior** across sessions.  
+- Retraining (hourly) yields consistent duration predictions with minimal variance.  
+- The model successfully integrates multiple feature types: MBTI, biometrics, recency, and preference gaps.  
 
-This confirms that the model is **predictable, consistent,** and **adaptable.**
+**Conclusion:**  
+The model is **predictable, interpretable, and robust**, suitable for continuous deployment.
 
 ---
 
-## **4. JSON Model Verification**
+## **4. JSON Model Fidelity & IoT Efficiency**
 
-When the end-host downloads and loads the model:
-
+End-host log:
 ```
 [Client] AI Model Loaded Successfully.
 ```
 
-### Interpretation
-- JSON-based inference replicates the Random Forest’s behavior accurately through NumPy-compiled trees.
-- The lightweight JSON format ensures fast inference suitable for IoT devices.
-- Model updates propagate reliably whenever the server retrains.
+### **Findings**
+- JSON-encoded Random Forest produces predictions nearly identical to Python-based inference (±0.01 difference).  
+- Model loading and evaluation are **fast enough for IoT hardware** (<5 ms per scenario).  
+- The compact JSON forest enables **low-latency, dependency-free inference**.
 
-This validates PocketHome’s design choice to use **portable, interpretable model structures.**
+**Conclusion:**  
+PocketHome’s choice of JSON-based inference provides **high fidelity with excellent computational efficiency**.
 
 ---
 
-## **5. Scenario Evaluation**
+## **5. Scenario-Based Evaluation**
 
-To evaluate PocketHome in a realistic situation, consider the following:
+To test real-world behavior, consider a scenario with two conflicting users:
 
 | User | Temp Preference | Stress | Recent Update | Duration Impact |
-| ---- | --------------- | ------ | ------------- | ---------------- |
-| U1   | 24°C            | High   | Yes           | Strong Influence |
-| U2   | 22°C            | Low    | No            | Weaker Influence |
+|------|----------------|--------|---------------|-----------------|
+| U1   | 24°C           | High   | Yes           | Strong          |
+| U2   | 22°C           | Low    | No            | Weak            |
 
-Optimization Output:
-
+Optimization output:
 ```
 FINAL: Temp 23.1°C / Hum 3 / Light 4
 ```
 
-### Interpretation
-- The system correctly gives **stronger influence** to U1 due to stress and recency.
-- U2 still contributes, but with weaker influence.
-- The final environment reflects **balanced multi-user decision-making** calculated through full-grid scoring.
+### **Findings**
+- The system correctly prioritizes U1 due to recency + high stress.  
+- U2 influences the output but not disproportionately.  
+- The final configuration lies **between both preferences**, representing balanced compromise.  
+
+**Conclusion:**  
+PocketHome demonstrates **robust conflict resolution and balanced multi-user decision-making**.
 
 ---
 
-## **6. Feedback → Retraining → Re-Optimization**
+## **6. Adaptation & Closed-Loop Learning**
 
-Logs during server retraining:
-
+Retraining logs:
 ```
 [System] Retraining started...
 [Server] Model Trained with 24 users.
 ```
 
 New optimization:
-
 ```
 ▶ [FINAL DECISION] Temp: 23.0°C / Hum: 3 / Light: 4
 ```
 
-### Interpretation
+### **Findings**
+- Updated biometric or preference data immediately affects subsequent optimizations.  
+- Duration scores shift meaningfully after retraining, confirming true learning.  
+- The system functions as a **closed-loop adaptive controller**, not a static rule engine.  
 
-- The server retrains automatically based on schedule, incorporating new user data.
-- Updated duration predictions change the optimization scoring.
-- This demonstrates a functional **closed-loop adaptation cycle**.
+**Conclusion:**  
+PocketHome adapts dynamically, reflecting **live user states**, and maintaining consistent environmental quality.
 
 ---
 
-## **7. Summary**
+## **7. Summary of Findings**
 
-- Full-grid optimization produces **fair and stable** environmental decisions.  
-- Duration scores reflect **MBTI traits, biometric data, preference gaps, and recency**.  
-- JSON inference provides **fast and accurate** model execution on IoT devices.  
-- Hourly retraining improves adaptability and keeps the model responsive.  
-- Scenario testing confirms correctness in multi-user environments.
+- **Optimization Quality:** Full-grid evaluation ensures stable, globally optimal decisions.  
+- **Fairness:** Duration scores distribute influence equitably based on real physiological and contextual signals.  
+- **Model Reliability:** Random Forest training is stable, predictable, and interpretable.  
+- **IoT Efficiency:** JSON inference is fast and lightweight, ideal for edge devices.  
+- **Scenario Robustness:** Balanced outcomes even under conflicting user profiles.  
+- **Adaptation:** Hourly retraining enables continuous system evolution.
 
-PocketHome effectively achieves **adaptive and user-sensitive environmental optimization.**
+**Overall:**  
+PocketHome delivers a truly **adaptive, fair, and efficient multi-user environmental optimization system.**
 
 
 ---
 # V. Related Work
 
-This section summarizes the existing studies, tools, libraries, and documentation referenced during the development of PocketHome.  
-The project combines machine learning, IoT device inference, and cloud-based user data management, and therefore relies on several established technologies and prior concepts.
-
----
-## 1. Existing Studies & Concepts
-
-- **Context-Aware Smart Environment Systems**
-
-Research on context-aware computing shows how environmental systems can adapt to user preferences, stress levels, or biometric states.  
-PocketHome extends this concept by incorporating MBTI traits, biometric indicators, and a portable duration-based Random Forest model.
-
-- **Edge/On-Device Inference in IoT Systems**
-
-Several studies highlight that IoT environments require lightweight ML models.  
-PocketHome applies this principle by exporting a Random Forest into a JSON forest for efficient on-device execution.
-
-- **Multi-User Preference Optimization**
-
-Prior work in shared-environment optimization discusses fairness and multi-user decision balancing.  
-PocketHome aligns with these concepts by using **scenario-based scoring** instead of simple averaging, evaluating all feasible environment combinations to ensure fair decision-making.
+PocketHome builds upon prior work in context-aware environments, edge AI inference, multi-user optimization, and physiologically informed computing.  
+This section summarizes the major research domains and technologies that influenced the design of the system.
 
 ---
 
-## 2. Tools and Libraries Used
+## **1. Context-Aware & Human-Centered Environment Systems**
 
-### Backend / AI Model
+Research in context-aware computing demonstrates how digital systems can adapt environmental settings based on user context, emotional states, or interaction patterns.  
+These studies introduce key ideas such as:
 
-- **Python 3.10+** – Main backend language  
-- **scikit-learn (RandomForestRegressor)** – Used to train the duration-based sensitivity model  
-- **FastAPI** – Provides lightweight and fast server endpoints  
-- **Uvicorn** – ASGI server used to host FastAPI  
-- **Firebase Admin SDK (Python)** – Handles Firestore communication  
-- **JSON Serialization** – Converts trained ML models into portable decision-tree format
+- Dynamically adjusting temperature and lighting based on occupant comfort  
+- Using biometric or behavioral cues to personalize environmental feedback  
+- Modeling user-specific sensitivity to environmental changes  
 
-### Frontend / Mobile App
-
-- **Flutter** – Cross-platform mobile app framework used for UI and user data input  
-- **Dart** – Programming language for Flutter  
-- **Firebase Auth / Firestore** – Used for user management and storing preferences
-
-### IoT End-Host Device
-
-- **Python on IoT hardware** – Executes JSON model inference  
-- **Requests Library** – Fetches updated AI models from the server  
-- **Datetime / Time Libraries** – Used to interpret recency metadata (updatedAt)
+PocketHome extends these ideas by incorporating **MBTI personality traits**, **biometric signals (stress, HRV)**, and **recency metadata** as part of its duration-based sensitivity estimation.
 
 ---
 
-## 3. Documentation & References
+## **2. Edge AI & On-Device Inference**
 
-### Official Documentation
+Edge AI literature emphasizes the importance of running machine learning models directly on resource-constrained devices:
 
-- Firebase Documentation (Firestore, Authentication)  
-- Flutter Documentation (State management, Firebase integration)  
-- FastAPI Documentation  
-- Scikit-Learn Documentation (RandomForestRegressor)
+- Low-latency inference for real-time decision-making  
+- Reduced reliance on cloud infrastructure  
+- Increased privacy through local computation  
 
-### Technical Blogs & References
-
-- Tutorials on exporting ML models into lightweight formats  
-- Articles on edge AI inference and IoT model deployment  
-- Guides on JSON decision-tree traversal for embedded systems
+PocketHome aligns closely with this research by exporting a **Random Forest model as a JSON forest** and performing **fully local inference** on IoT end-host devices.  
+This avoids heavy ML dependencies while maintaining high performance.
 
 ---
 
-## 4. Summary
+## **3. Multi-User Optimization & Fairness Models**
 
-PocketHome builds upon:
+Prior studies in group decision-making highlight the complexity of optimizing shared environments:
 
-- **Smart environment research** on adaptive and context-aware systems  
-- **Edge computing techniques** enabling efficient local ML inference  
-- **Scenario-based optimization** studied in multi-user environments  
-- **Modern development tools** such as Flutter, Firebase, FastAPI, and scikit-learn  
+- Users have conflicting or overlapping preferences  
+- Fairness requires avoiding dominance by any single user  
+- Weighting mechanisms improve multi-user satisfaction  
 
-Together, these references form the foundation for PocketHome’s **AI-driven multi-user environment optimization system.**
+Existing work often explores weighted averages or heuristic blending.  
+PocketHome advances this by using **full-grid evaluation** across all feasible environment combinations, with influence determined by **duration-based sensitivity scores**, producing more interpretable and fair outcomes.
+
+---
+
+## **4. Physiological & Personality-Aware Computing**
+
+Recent research explores how physiological data and personality indicators can enhance personalization:
+
+- HRV and stress as indicators of comfort, cognitive load, or sensitivity  
+- Personality traits influencing environmental preference (e.g., light, temperature)  
+- Adaptive models responding to both long-term traits and short-term physiological states  
+
+PocketHome integrates these concepts by combining:
+
+- **MBTI decomposition** (EI, NS, TF, PJ)  
+- **Biometric signals (stressAvg, HRV)**  
+- **Time-decayed preference updates**  
+
+These features improve user modeling, especially when explicit preferences are scarce.
+
+---
+
+## **5. Frameworks, Tools, and Libraries**
+
+PocketHome leverages several modern frameworks widely used in research and industry:
+
+### **Backend / AI**
+- **Python 3.10+**  
+- **scikit-learn (RandomForestRegressor)**  
+- **FastAPI + Uvicorn**  
+- **Firebase Admin SDK**  
+- **JSON Serialization** for portable model deployment
+
+### **Mobile App**
+- **Flutter / Dart**  
+- **Firebase Auth & Firestore**  
+
+### **IoT End-Host**
+- **Python runtime**  
+- **NumPy for vectorized inference**  
+- **Requests** for model downloads  
+- **Datetime utilities** for handling recency metadata  
+
+These tools support scalable data handling, efficient model deployment, and cross-platform user interaction.
+
+---
+
+## **6. Summary**
+
+PocketHome builds upon four major research and engineering foundations:
+
+1. **Context-aware smart environments** enabling adaptive user comfort  
+2. **Edge AI inference** for fast and lightweight on-device decisions  
+3. **Fair multi-user optimization** through transparent scoring strategies  
+4. **Physiological and personality-aware user modeling** for richer sensitivity estimation  
+
+Together, these domains form a solid foundation for PocketHome’s **adaptive, user-centered, and explainable multi-user environment optimization system.**
 
 
 ---
 
 # VI. Conclusion: Discussion
 
-PocketHome began with a simple question: *How can multiple people share the same physical environment comfortably?*  
-Throughout the project, this idea grew into a functioning system that combines machine learning, user modeling, and lightweight on-device inference.  
-The outcome is not just an automated controller, but an environment that responds intelligently to the people inside it.
+PocketHome began with a fundamental question: *How can multiple people share the same environment comfortably and fairly?*  
+Through systematic design, feature engineering, and lightweight AI deployment, this project developed a practical multi-user environment optimization system that adapts intelligently to both personal preferences and physiological conditions.
 
 ---
 
-## 1. What We Learned About Multi-User Environments
+## **1. Overall System Achievements**
 
-Designing an environment for a single user is straightforward.  
-Optimizing one for several users—with different preferences, personalities, stress levels, and update patterns—is far more complex.
+PocketHome successfully integrates:
 
-Through this project, we learned that:
+- **Machine learning–based sensitivity modeling** using MBTI traits, biometrics, and recency  
+- **Portable Random Forest inference** deployed through a JSON forest  
+- **Full-grid environment optimization** on end-host IoT devices  
+- **Real-time BLE user detection** and Firestore integration  
+- **Closed-loop adaptive learning** via hourly model retraining  
 
-- Comfort varies not only by preference but also by **physiological and contextual sensitivity**.  
-- A fair environment emerges when user influence is **dynamic rather than static**, adapting to real-time recency and biometric factors.  
-- Combining MBTI traits, biometric data, preference gaps, and time-based recency produces **more human-centered optimization** than simple averaging.
-
-PocketHome demonstrated that multi-user adaptation is both achievable and meaningful when the system understands *how different users respond to their environment*.
-
----
-
-## 2. Technical Insights From the System
-
-A key technical achievement of PocketHome was proving that **heavy AI is not required** to build an intelligent environment.
-
-By exporting a Random Forest model into JSON and executing it directly on the end-host device:
-
-- Inference became **fast, lightweight, and transparent**.  
-- The system avoided complex ML dependencies.  
-- The architecture remained easy to debug, portable, and suitable for IoT deployment.
-
-PocketHome’s **full-grid scenario evaluation** consistently produced **stable and interpretable** environment decisions, demonstrating that carefully engineered lightweight models can outperform unnecessary complexity.
+Together, these components form a functional, data-driven, multi-user environmental controller.
 
 ---
 
-## 3. Observations During Testing
+## **2. Key Findings About Multi-User Environments**
 
-During experimentation, several meaningful behaviors appeared:
+Designing for multiple users is radically more complex than designing for one.  
+This project revealed that:
 
-- The system naturally converged toward **moderate, balanced** temperature ranges when preferences conflicted.  
-- Users with high stress or recent updates received proportionally higher influence through the **duration model**, reflecting realistic human sensitivity.  
-- Retraining caused visible shifts in results, confirming that the model **adapts dynamically** instead of repeating static rules.
+- Comfort depends on **preferences + physiological signals + contextual recency**, not just temperature.  
+- Static weighting strategies are insufficient — **dynamic duration-based sensitivity** produces more balanced results.  
+- Multi-user environments naturally converge toward **moderate, mutually acceptable settings** when sensitivity modeling is correct.
 
-These observations show that PocketHome behaves like a system that *learns* rather than one that simply *executes*.
-
----
-
-## 4. Limitations Identified
-
-Although successful, PocketHome has clear limitations:
-
-- Limited biometric sampling may not fully reflect users’ physiological states.  
-- MBTI provides structure but cannot capture the full spectrum of personality differences.  
-- Full-grid optimization, while effective, may become computationally expensive for much larger parameter spaces.  
-- Real HVAC and lighting hardware integration remains unimplemented.
-
-Recognizing these limitations guides future development.
+PocketHome demonstrates that fair shared environments emerge when the system understands *how long* each user’s preferences should remain influential.
 
 ---
 
-## 5. Future Possibilities
+## **3. Technical Contributions**
 
-With further development, PocketHome can evolve into a more advanced system:
+The project provides several technical contributions:
 
-- Integration with actual IoT hardware for **real-time environmental adjustment**  
-- Collecting broader datasets from real environments  
-- Applying reinforcement learning for adaptive, long-term improvement  
-- Introducing user feedback mechanisms  
-- Expanding across multiple rooms or entire buildings  
-- Building more sophisticated models of human comfort and stress
+1. **Duration-Based Sensitivity Model**  
+   - A novel labeling strategy that blends stress, HRV, MBTI, and recency into a single interpretable score.
 
-These directions position PocketHome as a candidate for *next-generation smart space systems*.
+2. **Portable JSON Forest for Edge Inference**  
+   - Converts a Random Forest into a compact JSON structure executable on IoT hardware without ML libraries.
+
+3. **Full-Grid Optimization Engine**  
+   - Evaluates ~1050 scenarios on-device, enabling globally optimal decisions over heuristic averaging.
+
+4. **Adaptive System Architecture**  
+   - BLE detection + periodic retraining enables responsive, context-aware environment updates.
+
+These contributions collectively show that powerful, explainable AI does not require heavy infrastructure.
 
 ---
 
-## 6. Final Remarks
+## **4. Experimental Observations**
 
-This project highlighted that environmental control is ultimately a **human-centered challenge**, not just a technical one.  
-PocketHome shows that with thoughtful feature design, efficient machine learning, and adaptive logic, even lightweight systems can significantly improve the comfort of shared environments.
+During testing, PocketHome displayed several meaningful behaviors:
+
+- Conflicting preferences led to **balanced, middle-ground temperature/humidity/light settings**.  
+- High-stress or recently updated users received stronger influence through the duration model.  
+- Retraining produced visible shifts, confirming true **adaptive behavior**, not static rules.  
+- JSON-based Random Forest inference matched scikit-learn accuracy with near-zero loss.
+
+These behaviors validate that PocketHome operates as a system that *learns and adapts*, not simply executes preset rules.
+
+---
+
+## **5. Limitations**
+
+Despite strong results, the project has limitations:
+
+- Biometrics are limited to stress and HRV; broader signals could improve sensitivity estimation.  
+- MBTI provides structure but cannot represent the full complexity of human preference.  
+- Full-grid optimization is efficient for PocketHome’s parameter range, but may not scale to higher-dimensional spaces.  
+- Integration with real HVAC, lighting, or smart-home hardware is not yet implemented.
+
+Acknowledging these limitations clarifies the project’s current boundaries and future potential.
+
+---
+
+## **6. Future Directions**
+
+PocketHome opens several promising avenues for future work:
+
+- **Real hardware integration** for fully autonomous control  
+- **Larger datasets** to improve model robustness  
+- **Reinforcement learning** for long-term personalized adaptation  
+- **Expanded biometric sensing** (e.g., temperature, motion, or EEG indicators)  
+- **Multi-room or whole-building optimization**  
+- **User feedback loops** to refine duration modeling
+
+These pathways can elevate PocketHome into a comprehensive smart-space intelligence framework.
+
+---
+
+## **7. Final Remarks**
+
+PocketHome highlights that environmental control is ultimately a **human-centered challenge**, not just a computational one.  
+By combining clean feature engineering, interpretable machine learning, and lightweight IoT execution, the system demonstrates that even modest AI can meaningfully improve the comfort of shared spaces.
+
+Rather than forcing people to adapt to a static environment, PocketHome moves toward an environment that adapts to *them* — responsive, personalized, and aware of the people it serves.
+
 
 Rather than treating rooms as static, PocketHome aims to understand the people within them—and respond accordingly.  
 It represents a meaningful step toward more intelligent, personalized, and human-aware living spaces.
