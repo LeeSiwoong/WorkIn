@@ -510,18 +510,18 @@ END FUNCTION \end{lstlisting} }
 \subsection{Overall Architecture}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\linewidth]{pktmDiagram.png}    \caption{PocketHome Architecture Diagram}
+    \includegraphics[width=1\linewidth]{PocketHomeDiagram.png}    \caption{PocketHome Architecture Diagram}
     \label{fig:placeholder}
 \end{figure}
 \quad PocketHome system has 3 main modules: Frontend, ML Backend and Place. Frontend is for normal users, ML Backend is for database and virtual machine that makes model in cloud environment, and Place is for certain places like cafe, classroom, or subway.\par\vspace{\baselineskip}
 \quad Frontend contains smart phone and wearable devices such as smart watches. wearable devices send user's health information in case of when user agreed to utilize theirs. The smart phone sends user's data to two directions: database and control device by Flutter. It sends user preferences like which environment the user prefers and user's health information(optional) to database, and signal of user presence to control device using Bluetooth advertising so that control device can get those users' information from database.\par\vspace{\baselineskip}
 \quad In ML Backend, there are database and virtual machine. Database saves entire users' information, and sends all data to virtual machine in regular period. When virtual machine receives the data set from Firebase database, it makes the optimal AI model which can create single best optimized environment. Virtual machine is constructed on Ubuntu of Google Cloud, and AI model is made by scikit learn of Python.\par\vspace{\baselineskip}
 \quad Place module contains control device and appliances. They varies on different places, so basically there are no same places for this system. Once control device get user presence signal, it calls that user's information from database. This control device calculates the single best optimized environment by using AI model. The local AI model is regularly updated through FastAPI every period. After calculation, control device automatically modifies setting values of each appliance.\par
-\vspace{\baselineskip}
-\vspace{\baselineskip}
+
+
 
 \subsection{Directory Organization}
-\subsubsection{Backend AI Model}
+\subsubsection{BackendAIModel}
 \subsubsection{App}
 \begin{table}[H]
     \centering
@@ -555,7 +555,7 @@ END FUNCTION \end{lstlisting} }
     
 \end{table}
 
-\subsubsection{Place End Host}
+\subsubsection{PlaceEndHost}
 
 \begin{table}[H]
     \centering
@@ -623,10 +623,10 @@ END FUNCTION \end{lstlisting} }
 \end{itemize}
 
 
-\subsubsection{Backend}
+\subsubsection{ML Backend}
 \begin{itemize}
-    \item \textbf{Purpose}\par\quad The Backend Module of PocketHome stores users' preferences to database on cloud. Database is managed on cloud environment, and virtual machine brings that database to make the best AI Model. After building an AI model, it spreads the model to end hosts of places. Also it gives end hosts the user's information based on user presence from places.\\
-    \item \textbf{Functionality}\par\quad It stores user's preferences in form of NoSQL on Firebase. Firebase provides database to virtual machine on Google Cloud. Virtual machine works on Ubuntu, and it periodically get database to build a best model for mediation of user preferences. Model is trained by scikit learn of Python. After building a model, the model is delivered to end host of each place by FastAPI.\\
+    \item \textbf{Purpose}\par\quad The ML Backend Module of PocketHome stores users' preferences to database on cloud. Database is managed in a cloud environment, and the virtual machine brings the database to make the best AI Model. After building an AI model, it spreads the model to end hosts of places. Also it gives end hosts the user's information based on user presence from places.\\
+    \item \textbf{Functionality}\par\quad It stores user's preferences in form of NoSQL on Firebase. Firebase provides the database to virtual machine in Google Cloud. Virtual machine works on Ubuntu, and it periodically gets database to build a best model for mediation of user preferences. Model is trained by scikit learn of Python. After building a model, the model is delivered to end host of each place by FastAPI.\\
     \item \textbf{Location of Source Code}\par \quad \url{https://github.com/LeeSiwoong/PocketHome/tree/main/BackendAIModel} \\
     \item \textbf{Class Component} \begin{itemize}
     \item virtualMachineConfig.txt: It helps configurating virtual machine.
@@ -638,8 +638,8 @@ END FUNCTION \end{lstlisting} }
 
 \subsubsection{Place}
 \begin{itemize}
-    \item \textbf{Purpose}\par\quad The Place Module of PocketHome is for actual performance for each place. Every end host for every place works separately, but the main logic is same due to the model downloaded from the main single server. It collects the user presence and call their information from database.\\
-    \item \textbf{Functionality}\par\quad It defines if particular user is in that place by using Bluetooth advertisement every 5 minutes, and get their user preferences from database. Device that performs this mechanism is called control device, and it must be connected to network to get the information from cloud. Also, it computes the best single optimized environment by running model, which is downloaded from virtual machine.\\
+    \item \textbf{Purpose}\par\quad The Place Module of PocketHome is for actual performance for each place. Every end host for every place works separately, but the main logic is the same due to the model downloaded from the main single server. It collects the user presence and calls their information from database.\\
+    \item \textbf{Functionality}\par\quad It defines if a particular user is in that place by using Bluetooth advertisement every 5 minutes, and get their user preferences from database. Device that performs this mechanism is called control device, and it must be connected to network to get the information from cloud. Also, it computes the best single optimized environment by running a model, which is downloaded from virtual machine.\\
     \item \textbf{Location of Source Code}\par \quad \url{https://github.com/LeeSiwoong/PocketHome/tree/main/PlaceEndHost} \\
     \item \textbf{Class Component} \begin{itemize}
     \item end\_host.py: It is the code for downloading json file on control device.
@@ -695,9 +695,8 @@ END FUNCTION \end{lstlisting} }
 
 \section{Discussion}
 \quad This project was the first experience to make an application for all teammates. It was difficult to decide how to separate frontend and backend, and somehow we made it. However, there were still some complicated parts, so we tried to find easy answers on the Internet. In addition, constructing a cloud environment for machine learning was hard to achieve because the configuration was completely different from what we have done. Communication issues were also an issue of making this system in terms of understanding, simple miscommunications, and time to mail to each other.\par
-\quad Especially the making of an ML model for the best single environment and the connection of the application to the database were the two major problems of this project. The goal of this project is to find the best single environment for many people, and it is an unusual situation compared to other common situations. Therefore, how to make an algorithm for this multi-value data set was a most important quest.\par
-\quad Connecting the application and the database was done in Flutter to simplify the code. That was simple, but managing Firebase database was another problem. This was our first time using the NoSQL database, so we searched various documents to get used to it.\par
-\quad At the end of this project, we thought that learning new languages is important to have a wide spectrum of programming, and we will try to experience as much as we can.
+\quad Especially the making of an ML model for the best single environment and the connection of the application to the database were the two major problems of this project. The goal of this project is to find the best single environment for many people, and it is an unusual situation compared to other common situations. Therefore, how to make an algorithm for this multi-value data set using supervised learning was a most important quest.\par
+\quad Connecting the application and the database was done in Flutter to simplify the code. That was simple, but managing Firebase database was another problem. This was our first time using the NoSQL database, so we searched various documents to get used to it.
 
 
 \end{document}
