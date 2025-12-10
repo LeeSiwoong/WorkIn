@@ -894,3 +894,5 @@ Rather than forcing people to adapt to a static environment, PocketHome moves to
 
 Rather than treating rooms as static, PocketHome aims to understand the people within them—and respond accordingly.  
 It represents a meaningful step toward more intelligent, personalized, and human-aware living spaces.
+
+---
