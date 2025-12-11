@@ -896,3 +896,5 @@ Rather than treating rooms as static, PocketHome aims to understand the people w
 It represents a meaningful step toward more intelligent, personalized, and human-aware living spaces.
 
 ---
+## **8. Description Video**
+https://youtu.be/_JOROMRrZvc
